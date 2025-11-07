@@ -156,6 +156,72 @@
       <div id="modalBody"></div>
     </div>
   </div>
+<!-- === Marker Popup Templates === -->
+<template id="popupPosterTpl">
+  <div class="popup-menu">
+    <b class="popup-title"></b><br/>
+    <button class="popup-btn btnTarget">🎯 Target Market</button>
+    <button class="popup-btn btnPost">📝 Post</button>
+    <button class="popup-btn btnEdit">✏️ Edit</button>
+  </div>
+</template>
+
+<template id="popupSearcherTpl">
+  <div class="popup-menu">
+    <b class="popup-title"></b><br/>
+    <button class="popup-btn btnPosts">📄 Posts</button>
+    <button class="popup-btn btnProfile">👤 Profile</button>
+    <button class="popup-btn btnRefer">🔗 Refer</button>
+  </div>
+</template>
+
+<!-- === Modals for Popup Actions === -->
+<div id="modalTargetMarket" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close" data-close="modalTargetMarket">×</button>
+    <h2>Target Market</h2>
+    <form id="targetForm" class="stack">
+      <label>Base Radius (mi)
+        <input type="number" id="tmBaseRadius" value="0.5" min="0.1" step="0.1">
+      </label>
+      <label>Ring Count
+        <input type="number" id="tmRingCount" value="3" min="1" max="6">
+      </label>
+      <label>Distance Increment (mi)
+        <input type="number" id="tmIncrement" value="0.5" min="0.1" step="0.1">
+      </label>
+      <button type="submit">Apply</button>
+    </form>
+    <div id="tmMapPreview" class="map" style="height:300px;margin-top:10px;"></div>
+    <div id="tmSummary" class="stack small"></div>
+    <button id="btnOrderMailers" class="hidden">📬 Order Direct Mailers</button>
+  </div>
+</div>
+
+<div id="modalEditPin" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close" data-close="modalEditPin">×</button>
+    <h2>Edit Pin</h2>
+    <form id="editPinForm" class="stack">
+      <label>Title <input type="text" id="editPinTitle"></label>
+      <label>Icon
+        <select id="editPinIcon">
+          <option value="default">Default</option>
+          <option value="business">Business</option>
+          <option value="home">Home</option>
+          <option value="project">Project</option>
+        </select>
+      </label>
+      <label>Visibility
+        <select id="editPinVisibility">
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+      </label>
+      <button type="submit">Save</button>
+    </form>
+  </div>
+</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="config.js"></script>
