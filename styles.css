@@ -31,3 +31,7 @@ button.small{padding:6px 10px}
 .modal-close{position:absolute;right:10px;top:10px;border:none;background:#374151;border-radius:50%;width:28px;height:28px;cursor:pointer}
 .chips .tag{background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 8px;margin-right:6px}
 .leaflet-container a{color:#60a5fa}
+.popup-menu{display:flex;flex-direction:column;gap:6px}
+.popup-btn{padding:6px 10px;border-radius:6px;border:1px solid #374151;background:#1c2541;color:#e6edf3;cursor:pointer}
+.popup-btn:hover{background:#2f5597}
+.small{font-size:13px}
