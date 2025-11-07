@@ -88,6 +88,7 @@
         setLatLngInputs(ll.lat, ll.lng);
           async function loadMyPins(){
     const email = document.getElementById('postEmail').value.trim();
+    if(role==='poster'){ loadMyPins(); }
     if(!email) return; // wait until email known
     try{
       const res = await Api.listPinsByOwner({ email });
@@ -125,6 +126,8 @@
       });
     }
     setLatLngInputs(latlng.lat, latlng.lng);
+    saveMyPin(latlng.lat, latlng.lng);
+
   }
   function setLatLngInputs(lat,lng){
     document.getElementById('postLat').value = lat.toFixed(6);
