@@ -1,312 +1,286 @@
-/* ================================
-   app.js – Two-Sided Request Map
-   Poster/Evaluator + Searcher/Responder
-   ================================ */
+(function(){
+  let map, resultsMap, posterMarker, placing=false;
+  let markersLayer = L.layerGroup();
+  let resultsLayer = L.layerGroup();
+  const modal = document.getElementById('modal');
+  const modalBody = document.getElementById('modalBody');
+  const modalClose = document.getElementById('modalClose');
+  modalClose.addEventListener('click', ()=> closeModal());
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
 
-// === Globals ===
-let map, resultsMap;
-let posterMarker = null;
-let role = 'poster';
-let allPosts = [];
-let activePopupMarker = null;
+  function openModal(node){
+    modalBody.innerHTML = '';
+    modalBody.appendChild(node);
+    modal.classList.remove('hidden');
+  }
+  function closeModal(){
+    modal.classList.add('hidden');
+    modalBody.innerHTML = '';
+  }
 
-// === Initialize on DOM Ready ===
-document.addEventListener('DOMContentLoaded', () => {
-  initRoleToggle();
-  initPosterView();
-  initSearcherView();
-  restoreSavedRole();
-});
+  document.addEventListener('DOMContentLoaded', init);
 
-// ===============================
-// Role Toggle Logic
-// ===============================
-function initRoleToggle() {
-  const radios = document.querySelectorAll('input[name="role"]');
-  radios.forEach(r => {
-    r.addEventListener('change', e => {
-      role = e.target.value;
-      localStorage.setItem('role', role);
-      updateRoleView(role);
+  function init(){
+    // role toggle
+    document.querySelectorAll('input[name=role]').forEach(r => {
+      r.addEventListener('change', () => setRole(r.value));
     });
-  });
-}
+    setRole(document.querySelector('input[name=role]:checked').value);
 
-function restoreSavedRole() {
-  const saved = localStorage.getItem('role');
-  if (saved) {
-    role = saved;
-    document.querySelector(`input[name="role"][value="${saved}"]`).checked = true;
+    // maps
+    map = L.map('map').setView([37.266, -76.62], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    markersLayer.addTo(map);
+
+    resultsMap = L.map('resultsMap').setView([37.266, -76.62], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    }).addTo(resultsMap);
+    resultsLayer.addTo(resultsMap);
+
+    // Poster placing
+    document.getElementById('placePinBtn').addEventListener('click', () => {
+      placing = !placing;
+      document.getElementById('placePinBtn').classList.toggle('secondary', !placing);
+    });
+    map.on('click', onMapClickPlace);
+
+    // Submit post
+    document.getElementById('postForm').addEventListener('submit', onSubmitPost);
+
+    // Owner manage
+    document.getElementById('loadMyPostsBtn').addEventListener('click', loadMyPosts);
+
+    // Search
+    document.getElementById('searchForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      runSearch();
+    });
+
+    // initial ping (optional)
+    Api.ping().catch(()=>{});
   }
-  updateRoleView(role);
-}
 
-function updateRoleView(newRole) {
-  const posterPanel = document.getElementById('posterPanel');
-  const searcherPanel = document.getElementById('searcherPanel');
-  if (newRole === 'poster') {
-    posterPanel.classList.remove('hidden');
-    searcherPanel.classList.add('hidden');
-    initPosterMap();
-  } else {
-    posterPanel.classList.add('hidden');
-    searcherPanel.classList.remove('hidden');
-    initSearcherMap();
+  function setRole(role){
+    document.getElementById('posterPanel').classList.toggle('hidden', role!=='poster');
+    document.getElementById('searcherPanel').classList.toggle('hidden', role!=='searcher');
+    setTimeout(()=>{
+      map.invalidateSize();
+      resultsMap.invalidateSize();
+    }, 200);
   }
-}
 
-// ===============================
-// Poster / Evaluator View
-// ===============================
-function initPosterView() {
-  // Form submission
-  const postForm = document.getElementById('postForm');
-  postForm.addEventListener('submit', async (e) => {
+  function onMapClickPlace(e){
+    if(!placing) return;
+    const latlng = e.latlng;
+    if(posterMarker){
+      posterMarker.setLatLng(latlng);
+    } else {
+      posterMarker = L.marker(latlng, {draggable:true}).addTo(markersLayer);
+      posterMarker.on('dragend', ()=>{
+        const ll = posterMarker.getLatLng();
+        setLatLngInputs(ll.lat, ll.lng);
+      });
+    }
+    setLatLngInputs(latlng.lat, latlng.lng);
+  }
+  function setLatLngInputs(lat,lng){
+    document.getElementById('postLat').value = lat.toFixed(6);
+    document.getElementById('postLng').value = lng.toFixed(6);
+  }
+
+  async function onSubmitPost(e){
     e.preventDefault();
-    const data = collectPostData();
-    document.getElementById('postStatus').textContent = 'Saving...';
-    try {
-      await savePost(data);
-      document.getElementById('postStatus').textContent = '✅ Post saved successfully.';
-      postForm.reset();
-      localStorage.removeItem('posterMarker');
-      if (posterMarker) map.removeLayer(posterMarker);
-    } catch (err) {
-      document.getElementById('postStatus').textContent = '❌ Error saving post.';
-      console.error(err);
+    const status = document.getElementById('postStatus');
+    status.textContent = '';
+    const payload = {
+      title: document.getElementById('postTitle').value.trim(),
+      desc:  document.getElementById('postDesc').value.trim(),
+      tags:  document.getElementById('postTags').value.trim(),
+      email: document.getElementById('postEmail').value.trim(),
+      key:   document.getElementById('postKey').value.trim(),
+      eval:  document.getElementById('postEval').value.trim(),
+      lat:   document.getElementById('postLat').value,
+      lng:   document.getElementById('postLng').value
+    };
+    if(!payload.lat || !payload.lng){
+      status.textContent = 'Please place your pin on the map first.';
+      return;
     }
-  });
-
-  // Load My Posts
-  document.getElementById('loadMyPostsBtn').addEventListener('click', async () => {
-    const email = document.getElementById('ownerEmail').value.trim();
-    const key = document.getElementById('ownerKey').value.trim();
-    const list = document.getElementById('myPosts');
-    list.innerHTML = 'Loading...';
-    try {
-      const posts = await fetchMyPosts(email, key);
-      list.innerHTML = '';
-      posts.forEach(p => list.appendChild(renderPostCard(p)));
-    } catch (err) {
-      list.innerHTML = 'Error loading posts.';
-      console.error(err);
+    try{
+      const res = await Api.createPost(payload);
+      if(res.ok){
+        status.textContent = `Saved! PostID: ${res.postId}`;
+        status.style.color = '#22c55e';
+        // reset minimal fields, keep email/key
+        document.getElementById('postTitle').value='';
+        document.getElementById('postDesc').value='';
+        document.getElementById('postTags').value='';
+        document.getElementById('postEval').value='';
+      }else{
+        status.textContent = res.error || 'Save failed';
+        status.style.color = '#ef4444';
+      }
+    }catch(err){
+      status.textContent = err.message;
+      status.style.color = '#ef4444';
     }
-  });
-
-  // Place / Move Pin button
-  document.getElementById('placePinBtn').addEventListener('click', () => {
-    alert('Click on the map to place or move your pin.');
-    enablePinPlacement();
-  });
-}
-
-function initPosterMap() {
-  if (map) return; // initialize once
-  map = L.map('map').setView([37.0, -76.4], 11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  const saved = localStorage.getItem('posterMarker');
-  if (saved) {
-    const { lat, lng } = JSON.parse(saved);
-    posterMarker = L.marker([lat, lng]).addTo(map);
   }
 
-  map.on('click', (e) => {
-    if (!document.body.classList.contains('placing-pin')) return;
-    const { lat, lng } = e.latlng;
-    if (posterMarker) map.removeLayer(posterMarker);
-    posterMarker = L.marker([lat, lng]).addTo(map);
-    localStorage.setItem('posterMarker', JSON.stringify({ lat, lng }));
-    document.getElementById('postLat').value = lat;
-    document.getElementById('postLng').value = lng;
-    document.body.classList.remove('placing-pin');
+  async function loadMyPosts(){
+    const email = document.getElementById('ownerEmail').value.trim();
+    const key   = document.getElementById('ownerKey').value.trim();
+    const container = document.getElementById('myPosts');
+    container.innerHTML = '';
+    if(!email || !key){
+      container.textContent = 'Enter your email and access key.';
+      return;
+    }
+    try{
+      const res = await Api.listPostsByOwner({ email, key });
+      if(!res.ok){ container.textContent = res.error || 'Failed to load.'; return; }
+      const posts = res.posts || [];
+      if(!posts.length){ container.textContent = 'No posts yet.'; return; }
+      posts.forEach(p => container.appendChild(renderOwnerPost(p, email, key)));
+    }catch(err){
+      container.textContent = err.message;
+    }
+  }
 
-    // Bind popup
-    const popupTpl = document.getElementById('popupPosterTpl').content.cloneNode(true);
-    popupTpl.querySelector('.popup-title').textContent = 'My Marker';
-    popupTpl.querySelector('.btnTarget').addEventListener('click', openTargetMarketModal);
-    popupTpl.querySelector('.btnPost').addEventListener('click', () => alert('Open Post form.'));
-    popupTpl.querySelector('.btnEdit').addEventListener('click', openEditPinModal);
-    posterMarker.bindPopup(popupTpl).openPopup();
-  });
-}
+  function renderOwnerPost(p, email, key){
+    const tpl = document.getElementById('postItemTpl').content.cloneNode(true);
+    tpl.querySelector('.title').textContent = p.title;
+    tpl.querySelector('.pid').textContent = p.postId;
+    tpl.querySelector('.desc').textContent = p.desc;
+    tpl.querySelector('.eval').textContent = p.eval || '—';
+    tpl.querySelector('.coords').textContent = `${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}`;
+    const tagsEl = tpl.querySelector('.tags');
+    (p.tags || '').split(',').map(s=>s.trim()).filter(Boolean).forEach(t => {
+      const span = document.createElement('span'); span.className='tag'; span.textContent = t; tagsEl.appendChild(span);
+    });
+    const responsesWrap = tpl.querySelector('.responses');
+    // load responses lazily when details opens
+    tpl.querySelector('details').addEventListener('toggle', async (e)=>{
+      if(e.target.open && !responsesWrap.dataset.loaded){
+        responsesWrap.textContent = 'Loading responses…';
+        const res = await Api.listResponses({ postId: p.postId, email, key });
+        if(!res.ok){ responsesWrap.textContent = res.error || 'Failed to load.'; return; }
+        responsesWrap.innerHTML='';
+        (res.responses||[]).forEach(r => responsesWrap.appendChild(renderResponseEvalForm(p.postId, r, email, key)));
+        responsesWrap.dataset.loaded = '1';
+      }
+    });
+    return tpl;
+  }
 
-function enablePinPlacement() {
-  document.body.classList.add('placing-pin');
-}
+  function renderResponseEvalForm(postId, r, email, key){
+    const tpl = document.getElementById('responseItemTpl').content.cloneNode(true);
+    tpl.querySelector('.name').textContent = r.name || '—';
+    tpl.querySelector('.email').textContent = r.email || '—';
+    tpl.querySelector('.message').textContent = r.message || '';
+    const form = tpl.querySelector('.evalForm');
+    form.rating.value = r.rating || '';
+    form.status.value = r.status || '';
+    form.notes.value  = r.notes  || '';
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const payload = {
+        postId, responseId: r.responseId,
+        email, key,
+        rating: form.rating.value, status: form.status.value, notes: form.notes.value
+      };
+      const btn = form.querySelector('button'); const prev = btn.textContent; btn.textContent = 'Saving…'; btn.disabled = true;
+      try{
+        const res = await Api.evaluateResponse(payload);
+        btn.textContent = res.ok ? 'Saved!' : 'Error';
+        setTimeout(()=>{ btn.textContent = prev; btn.disabled=false; }, 800);
+      }catch(err){
+        btn.textContent = 'Error'; setTimeout(()=>{ btn.textContent = prev; btn.disabled=false; }, 800);
+      }
+    });
+    return tpl;
+  }
 
-function collectPostData() {
-  return {
-    title: document.getElementById('postTitle').value.trim(),
-    desc: document.getElementById('postDesc').value.trim(),
-    tags: document.getElementById('postTags').value.trim(),
-    email: document.getElementById('postEmail').value.trim(),
-    key: document.getElementById('postKey').value.trim(),
-    eval: document.getElementById('postEval').value.trim(),
-    lat: parseFloat(document.getElementById('postLat').value),
-    lng: parseFloat(document.getElementById('postLng').value)
-  };
-}
-
-// Simulated savePost
-async function savePost(data) {
-  console.log('Saving post:', data);
-  // Replace with shared.js helper call to backend
-  await new Promise(res => setTimeout(res, 500));
-  return true;
-}
-
-// Simulated fetchMyPosts
-async function fetchMyPosts(email, key) {
-  console.log('Fetching posts for', email);
-  // Replace with shared.js call
-  await new Promise(res => setTimeout(res, 300));
-  return allPosts.filter(p => p.email === email && p.key === key);
-}
-
-function renderPostCard(p) {
-  const tpl = document.getElementById('postItemTpl').content.cloneNode(true);
-  tpl.querySelector('.title').textContent = p.title || '(untitled)';
-  tpl.querySelector('.tags').textContent = p.tags || '';
-  tpl.querySelector('.pid').textContent = p.id || '(none)';
-  tpl.querySelector('.eval').textContent = p.eval || '';
-  tpl.querySelector('.coords').textContent = `${p.lat}, ${p.lng}`;
-  tpl.querySelector('.desc').textContent = p.desc || '';
-  return tpl;
-}
-
-// ===============================
-// Searcher / Responder View
-// ===============================
-function initSearcherView() {
-  document.getElementById('searchForm').addEventListener('submit', async (e) => {
-    e.preventDefault(); // critical fix to stop page reload
+  async function runSearch(){
     const q = document.getElementById('q').value.trim();
     const tags = document.getElementById('tags').value.trim();
-    document.getElementById('searchStatus').textContent = 'Searching...';
-    try {
-      const results = await runSearch(q, tags);
-      document.getElementById('searchStatus').textContent = `${results.length} results found.`;
-      renderSearchResults(results);
-    } catch (err) {
-      document.getElementById('searchStatus').textContent = 'Error during search.';
-      console.error(err);
+    const statusEl = document.getElementById('searchStatus');
+    statusEl.textContent = 'Searching…';
+    try{
+      const res = await Api.listPosts({ q, tags });
+      if(!res.ok){ statusEl.textContent = res.error || 'Search failed.'; return; }
+      statusEl.textContent = `${(res.posts||[]).length} result(s)`;
+      renderSearchResults(res.posts||[]);
+    }catch(err){
+      statusEl.textContent = err.message;
     }
-  });
-}
-
-function initSearcherMap() {
-  if (resultsMap) return;
-  resultsMap = L.map('resultsMap').setView([37.0, -76.4], 11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(resultsMap);
-}
-
-async function runSearch(q, tags) {
-  console.log('Search terms:', q, tags);
-  await new Promise(res => setTimeout(res, 400)); // simulate delay
-  // For demo, return all posts containing q or tags
-  const tagList = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-  return allPosts.filter(p =>
-    (!q || p.title.toLowerCase().includes(q.toLowerCase()) || p.desc.toLowerCase().includes(q.toLowerCase())) &&
-    (tagList.length === 0 || tagList.some(t => p.tags.toLowerCase().includes(t)))
-  );
-}
-
-function renderSearchResults(results) {
-  const list = document.getElementById('resultsList');
-  list.innerHTML = '';
-  if (resultsMap) {
-    resultsMap.eachLayer(l => { if (l instanceof L.Marker) resultsMap.removeLayer(l); });
   }
 
-  results.forEach(p => {
-    const marker = L.marker([p.lat, p.lng]).addTo(resultsMap);
-    const popupTpl = document.getElementById('popupSearcherTpl').content.cloneNode(true);
-    popupTpl.querySelector('.popup-title').textContent = p.title;
-    popupTpl.querySelector('.btnPosts').addEventListener('click', () => openRespondModal(p));
-    popupTpl.querySelector('.btnProfile').addEventListener('click', () => alert('View profile of poster.'));
-    popupTpl.querySelector('.btnRefer').addEventListener('click', () => alert('Refer this post.'));
-    marker.bindPopup(popupTpl);
-    list.appendChild(renderPostCard(p));
-  });
-}
+  function renderSearchResults(posts){
+    resultsLayer.clearLayers();
+    const list = document.getElementById('resultsList');
+    list.innerHTML = '';
+    const bounds = [];
+    posts.forEach(p => {
+      const m = L.marker([+p.lat, +p.lng]).addTo(resultsLayer);
+      m.bindPopup(`<b>${escapeHtml(p.title)}</b><br>${escapeHtml(p.desc)}<br><i>${escapeHtml(p.tags||'')}</i><br><br><button class="popupRespond" data-id="${p.postId}">Respond</button>`);
+      m.on('popupopen', () => {
+        const btn = document.querySelector('.leaflet-popup .popupRespond');
+        if(btn){
+          btn.addEventListener('click', () => openRespondModal(p));
+        }
+      });
+      bounds.push([+p.lat, +p.lng]);
 
-// ===============================
-// Marker Popup Modals
-// ===============================
-function openTargetMarketModal() {
-  showModal('modalTargetMarket');
-  const form = document.getElementById('targetForm');
-  const preview = L.map('tmMapPreview').setView([37.0, -76.4], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(preview);
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const base = parseFloat(document.getElementById('tmBaseRadius').value);
-    const rings = parseInt(document.getElementById('tmRingCount').value);
-    const step = parseFloat(document.getElementById('tmIncrement').value);
-    const latlng = posterMarker ? posterMarker.getLatLng() : preview.getCenter();
-    preview.eachLayer(l => { if (l instanceof L.Circle) preview.removeLayer(l); });
-    for (let i = 0; i < rings; i++) {
-      const radius = (base + i * step) * 1609.34;
-      L.circle(latlng, { radius, color: i === 0 ? 'green' : 'blue', fillOpacity: 0.1 }).addTo(preview);
-    }
-    document.getElementById('tmSummary').innerHTML = `Created ${rings} rings starting at ${base} mi with ${step} mi increments.`;
-    document.getElementById('btnOrderMailers').classList.remove('hidden');
-  }, { once: true });
-}
-
-function openEditPinModal() {
-  showModal('modalEditPin');
-}
-
-function openRespondModal(post) {
-  showModal();
-  const modal = document.getElementById('modal');
-  const body = document.getElementById('modalBody');
-  body.innerHTML = '';
-  const tpl = document.getElementById('respondTpl').content.cloneNode(true);
-  tpl.querySelector('.title').textContent = post.title;
-  tpl.querySelector('.desc').textContent = post.desc;
-  tpl.querySelector('input[name="postId"]').value = post.id || '';
-  tpl.querySelector('.cancelRespond').addEventListener('click', closeModal);
-  tpl.querySelector('form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    tpl.querySelector('.status').textContent = 'Sending...';
-    await new Promise(res => setTimeout(res, 400));
-    tpl.querySelector('.status').textContent = '✅ Response sent!';
-    e.target.reset();
-  });
-  body.appendChild(tpl);
-}
-
-// ===============================
-// Modal Helpers
-// ===============================
-function showModal(id) {
-  if (!id) {
-    document.getElementById('modal').classList.remove('hidden');
-    return;
+      // list card
+      const card = document.createElement('div'); card.className='card';
+      const tagsEl = document.createElement('div'); tagsEl.className='chips';
+      (p.tags||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(t => {
+        const span = document.createElement('span'); span.className='tag'; span.textContent = t; tagsEl.appendChild(span);
+      });
+      card.innerHTML = `<h3 style="margin:0 0 6px 0">${escapeHtml(p.title)}</h3>`;
+      const desc = document.createElement('p'); desc.textContent = p.desc; card.appendChild(desc);
+      card.appendChild(tagsEl);
+      const act = document.createElement('div'); act.className='row';
+      const btn = document.createElement('button'); btn.textContent='Respond'; btn.addEventListener('click', ()=> openRespondModal(p));
+      act.appendChild(btn);
+      card.appendChild(act);
+      list.appendChild(card);
+    });
+    if(bounds.length){ resultsMap.fitBounds(bounds, { padding: [20,20] }); }
   }
-  document.getElementById(id).classList.remove('hidden');
-}
 
-function closeModal() {
-  document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
-}
+  function openRespondModal(post){
+    const tpl = document.getElementById('respondTpl').content.cloneNode(true);
+    tpl.querySelector('.title').textContent = post.title;
+    tpl.querySelector('.desc').textContent = post.desc;
+    const form = tpl.querySelector('form');
+    form.postId.value = post.postId;
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const btns = form.querySelectorAll('button'); btns.forEach(b=>b.disabled=true);
+      const status = form.querySelector('.status'); status.textContent='Sending…';
+      const payload = {
+        postId: post.postId,
+        name: form.name.value.trim(),
+        email: form.email.value.trim(),
+        message: form.message.value.trim()
+      };
+      try{
+        const res = await Api.createResponse(payload);
+        if(res.ok){ status.textContent='Sent!'; setTimeout(()=> closeModal(), 600); }
+        else { status.textContent = res.error || 'Failed.'; btns.forEach(b=>b.disabled=false); }
+      }catch(err){
+        status.textContent = err.message; btns.forEach(b=>b.disabled=false);
+      }
+    });
+    tpl.querySelector('.cancelRespond').addEventListener('click', ()=> closeModal());
+    openModal(tpl);
+  }
 
-document.querySelectorAll('.modal-close').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.close;
-    if (target) document.getElementById(target).classList.add('hidden');
-    else closeModal();
-  });
-});
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+})();
