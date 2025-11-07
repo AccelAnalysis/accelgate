@@ -46,6 +46,10 @@
       document.getElementById('placePinBtn').classList.toggle('secondary', !placing);
     });
     map.on('click', onMapClickPlace);
+    // Load my pins (Poster/Evaluator)
+    if(document.querySelector('input[name=role]:checked').value==='poster'){
+      loadMyPins();
+    }
 
     // Submit post
     document.getElementById('postForm').addEventListener('submit', onSubmitPost);
@@ -82,6 +86,42 @@
       posterMarker.on('dragend', ()=>{
         const ll = posterMarker.getLatLng();
         setLatLngInputs(ll.lat, ll.lng);
+          async function loadMyPins(){
+    const email = document.getElementById('postEmail').value.trim();
+    if(!email) return; // wait until email known
+    try{
+      const res = await Api.listPinsByOwner({ email });
+      if(!res.ok) return;
+      markersLayer.clearLayers();
+      (res.pins||[]).forEach(p=>{
+        const m = L.marker([+p.lat,+p.lng]).addTo(markersLayer);
+        attachMarkerPopup(m, {
+          id:p.pinId,title:p.title,icon:p.icon,visibility:p.visibility
+        });
+      });
+    }catch(err){ console.warn(err); }
+  }
+
+  async function saveMyPin(lat,lng){
+    const email=document.getElementById('postEmail').value.trim();
+    if(!email) return;
+    const payload={
+      email,
+      title:'My Pin',
+      lat:lat,
+      lng:lng,
+      icon:'default',
+      visibility:'public'
+    };
+    try{
+      const res=await Api.savePin(payload);
+      if(res.ok){
+        console.log('Pin saved',res.pinId);
+        loadMyPins();
+      }
+    }catch(e){ console.error(e); }
+  }
+
       });
     }
     setLatLngInputs(latlng.lat, latlng.lng);
