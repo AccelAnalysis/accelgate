@@ -217,6 +217,104 @@
       statusEl.textContent = err.message;
     }
   }
+  // === Role-aware marker popup system ===
+  function attachMarkerPopup(marker, data){
+    const role = document.querySelector('input[name=role]:checked').value;
+    const tplId = (role === 'poster') ? 'popupPosterTpl' : 'popupSearcherTpl';
+    const tpl = document.getElementById(tplId).content.cloneNode(true);
+    tpl.querySelector('.popup-title').textContent = data.title || 'Untitled Pin';
+    const div = document.createElement('div');
+    div.appendChild(tpl);
+
+    // bind popup
+    marker.bindPopup(div.innerHTML);
+
+    // handle popupopen to wire events
+    marker.on('popupopen', e=>{
+      const popup = document.querySelector('.leaflet-popup');
+      if(!popup) return;
+
+      if(role==='poster'){
+        popup.querySelector('.btnTarget').onclick = ()=> openTargetMarketModal(data, marker);
+        popup.querySelector('.btnPost').onclick   = ()=> openPostModalForMarker(data);
+        popup.querySelector('.btnEdit').onclick   = ()=> openEditPinModal(data, marker);
+      }else{
+        popup.querySelector('.btnPosts').onclick  = ()=> openPostsModal(data);
+        popup.querySelector('.btnProfile').onclick= ()=> openProfileModal(data);
+        popup.querySelector('.btnRefer').onclick  = ()=> openReferModal(data);
+      }
+    });
+  }
+
+  // --- Modal helpers ---
+  function openModalById(id){ document.getElementById(id).classList.remove('hidden'); }
+  function closeModalById(id){ document.getElementById(id).classList.add('hidden'); }
+  document.querySelectorAll('.modal-close').forEach(btn=>{
+    btn.addEventListener('click', ()=> closeModalById(btn.dataset.close));
+  });
+
+  // === Poster/Evaluator actions ===
+  function openTargetMarketModal(data, marker){
+    openModalById('modalTargetMarket');
+    const tmMap = L.map('tmMapPreview').setView(marker.getLatLng(), 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(tmMap);
+    const group = L.layerGroup().addTo(tmMap);
+
+    const form = document.getElementById('targetForm');
+    const summary = document.getElementById('tmSummary');
+    const orderBtn = document.getElementById('btnOrderMailers');
+
+    form.onsubmit = (ev)=>{
+      ev.preventDefault();
+      group.clearLayers();
+      summary.innerHTML='';
+      orderBtn.classList.add('hidden');
+      const base = parseFloat(document.getElementById('tmBaseRadius').value);
+      const rings = parseInt(document.getElementById('tmRingCount').value);
+      const inc = parseFloat(document.getElementById('tmIncrement').value);
+      const latlng = marker.getLatLng();
+      let cur = base;
+      const counts=[];
+      for(let i=0;i<rings;i++){
+        const c = L.circle(latlng,{radius:cur*1609.34,color:'#2F5597',fill:false}).addTo(group);
+        counts.push({ring:i+1,radius:cur,targets:Math.floor(Math.random()*200)+50}); // placeholder data
+        cur+=inc;
+      }
+      summary.innerHTML = counts.map(c=>`Ring ${c.ring}: ${c.radius.toFixed(1)}mi — ${c.targets} targets`).join('<br>');
+      orderBtn.classList.remove('hidden');
+    };
+    orderBtn.onclick = ()=>{
+      alert('Redirecting to Order Direct Mailers flow…');
+      closeModalById('modalTargetMarket');
+      // TODO: integrate proposal.html navigation with prefilled params
+    };
+  }
+
+  function openPostModalForMarker(data){
+    alert('Open Post creation modal for marker: '+data.title);
+    // integrate with existing post creation form
+  }
+
+  function openEditPinModal(data, marker){
+    openModalById('modalEditPin');
+    document.getElementById('editPinTitle').value = data.title || '';
+    document.getElementById('editPinIcon').value = data.icon || 'default';
+    document.getElementById('editPinVisibility').value = data.visibility || 'public';
+    document.getElementById('editPinForm').onsubmit = (e)=>{
+      e.preventDefault();
+      data.title = document.getElementById('editPinTitle').value;
+      data.icon = document.getElementById('editPinIcon').value;
+      data.visibility = document.getElementById('editPinVisibility').value;
+      marker.bindTooltip(data.title);
+      closeModalById('modalEditPin');
+      // TODO: persist via Api.updatePin
+    };
+  }
+
+  // === Searcher/Responder actions ===
+  function openPostsModal(data){ alert('Show posts for marker: '+data.title); }
+  function openProfileModal(data){ alert('Show profile for '+data.title); }
+  function openReferModal(data){ alert('Show referral modal for '+data.title); }
 
   function renderSearchResults(posts){
     resultsLayer.clearLayers();
