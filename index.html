@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Two-Sided Map: Poster/Evaluator & Searcher/Responder</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Two‑Sided Request Map</h1>
+    <div class="role-toggle">
+      <label><input type="radio" name="role" value="poster" checked> Poster/Evaluator</label>
+      <label><input type="radio" name="role" value="searcher"> Searcher/Responder</label>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="panel" id="posterPanel">
+      <h2>Post a Request</h2>
+      <div class="map-tools">
+        <button id="placePinBtn" type="button">Place / Move Pin</button>
+        <span class="hint">Click the map to set your pin when enabled.</span>
+      </div>
+      <div id="map" class="map"></div>
+
+      <form id="postForm" class="stack">
+        <div class="row">
+          <label>Title
+            <input type="text" id="postTitle" required placeholder="e.g., Need help flyering in Carrollton" />
+          </label>
+        </div>
+        <div class="row">
+          <label>Description
+            <textarea id="postDesc" rows="3" required placeholder="Describe the request…"></textarea>
+          </label>
+        </div>
+        <div class="row">
+          <label>Tags (comma‑separated)
+            <input type="text" id="postTags" placeholder="marketing, printing, dogs, veterans" />
+          </label>
+        </div>
+        <div class="row grid-2">
+          <label>Contact Email
+            <input type="email" id="postEmail" required placeholder="you@example.com" />
+          </label>
+          <label>Access Key (to manage/evaluate)
+            <input type="password" id="postKey" required placeholder="Choose a secret key" />
+          </label>
+        </div>
+        <div class="row">
+          <label>Evaluation Parameters (free‑form)
+            <input type="text" id="postEval" placeholder="e.g., budget ≤ $500; turnaround ≤ 7 days" />
+          </label>
+        </div>
+        <input type="hidden" id="postLat">
+        <input type="hidden" id="postLng">
+
+        <div class="row">
+          <button id="submitPostBtn" type="submit">Create Post</button>
+          <span id="postStatus" class="status"></span>
+        </div>
+      </form>
+
+      <hr/>
+
+      <h3>Manage My Posts</h3>
+      <form id="ownerForm" class="row grid-3">
+        <label>Email <input type="email" id="ownerEmail" placeholder="you@example.com" /></label>
+        <label>Access Key <input type="password" id="ownerKey" placeholder="your key" /></label>
+        <button id="loadMyPostsBtn" type="button">Load My Posts</button>
+      </form>
+      <div id="myPosts" class="list"></div>
+    </section>
+
+    <section class="panel hidden" id="searcherPanel">
+      <h2>Search & Respond</h2>
+      <form id="searchForm" class="row grid-3">
+        <label>Keywords <input type="text" id="q" placeholder="search text…" /></label>
+        <label>Tags (comma) <input type="text" id="tags" placeholder="e.g., printing, dogs" /></label>
+        <button id="runSearchBtn" type="submit">Search</button>
+      </form>
+      <div id="searchStatus" class="status"></div>
+      <div id="resultsMap" class="map"></div>
+      <div id="resultsList" class="list"></div>
+    </section>
+  </main>
+
+  <template id="postItemTpl">
+    <details class="card">
+      <summary><strong class="title"></strong> <span class="chips tags"></span></summary>
+      <div class="meta">
+        <div><b>PostID:</b> <span class="pid"></span></div>
+        <div><b>Eval Params:</b> <span class="eval"></span></div>
+        <div><b>Lat/Lng:</b> <span class="coords"></span></div>
+      </div>
+      <p class="desc"></p>
+      <div class="responses"></div>
+    </details>
+  </template>
+
+  <template id="responseItemTpl">
+    <div class="response">
+      <div class="row"><b>Responder:</b> <span class="name"></span> &lt;<span class="email"></span>&gt;</div>
+      <p class="message"></p>
+      <form class="evalForm row grid-4">
+        <label>Rating
+          <select name="rating">
+            <option value="">—</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+          </select>
+        </label>
+        <label>Status
+          <select name="status">
+            <option value="">pending</option>
+            <option value="accepted">accepted</option>
+            <option value="rejected">rejected</option>
+          </select>
+        </label>
+        <label>Notes
+          <input name="notes" type="text" placeholder="brief notes"/>
+        </label>
+        <button type="submit" class="small">Save</button>
+      </form>
+    </div>
+  </template>
+
+  <template id="respondTpl">
+    <form class="respondForm stack">
+      <h3>Respond to: <span class="title"></span></h3>
+      <p class="desc"></p>
+      <div class="row grid-2">
+        <label>Your Name <input required type="text" name="name" placeholder="Your name"/></label>
+        <label>Your Email <input required type="email" name="email" placeholder="you@example.com"/></label>
+      </div>
+      <label>Message
+        <textarea required name="message" rows="3" placeholder="Your response…"></textarea>
+      </label>
+      <input type="hidden" name="postId"/>
+      <div class="row">
+        <button type="submit">Send Response</button>
+        <button type="button" class="secondary cancelRespond">Cancel</button>
+        <span class="status"></span>
+      </div>
+    </form>
+  </template>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="modalClose" class="modal-close" aria-label="Close">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="config.js"></script>
+  <script src="shared.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
