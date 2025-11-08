@@ -1,229 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Two-Sided Map: Poster/Evaluator & Searcher/Responder</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accel Mailer | Interactive Map Console</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha512-p5QvY9H5x0p3zv0l7d3uY2D9i4hKxgxM8v4Kk1E6yQIVZ8HjJZtSzmuTqEYsEO4h5l0uVdxkE/F2kcQoo0Tt0w=="
+    crossorigin=""
+  />
+
+  <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- Font & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
-  <header class="topbar">
-    <h1>Two‑Sided Request Map</h1>
-    <div class="role-toggle">
-      <label><input type="radio" name="role" value="poster" checked> Poster/Evaluator</label>
-      <label><input type="radio" name="role" value="searcher"> Searcher/Responder</label>
+  <!-- HEADER BAR -->
+  <header id="mainHeader">
+    <div class="header-left">
+      <h1>Accel Mailer</h1>
+      <p class="subtitle">Map-Based Targeting & Proposal Builder</p>
+    </div>
+
+    <div class="header-right">
+      <div class="mode-switch">
+        <label>Mode:</label>
+        <select id="viewMode">
+          <option value="poster">Poster / Evaluator</option>
+          <option value="searcher">Searcher / Responder</option>
+        </select>
+      </div>
+      <button id="resetMapBtn" class="primary-btn">Reset Map</button>
     </div>
   </header>
 
-  <main class="grid">
-    <section class="panel" id="posterPanel">
-      <h2>Post a Request</h2>
-      <div class="map-tools">
-        <button id="placePinBtn" type="button">Place / Move Pin</button>
-        <span class="hint">Click the map to set your pin when enabled.</span>
-      </div>
-      <div id="map" class="map"></div>
+  <!-- MAIN CONTAINER -->
+  <main id="mainContainer">
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <section class="sidebar-section">
+        <h2>Targeting Controls</h2>
+        <label for="radiusSize">Radius (miles)</label>
+        <input type="number" id="radiusSize" min="1" max="25" value="3" />
 
-      <form id="postForm" class="stack">
-        <div class="row">
-          <label>Title
-            <input type="text" id="postTitle" required placeholder="e.g., Need help flyering in Carrollton" />
-          </label>
-        </div>
-        <div class="row">
-          <label>Description
-            <textarea id="postDesc" rows="3" required placeholder="Describe the request…"></textarea>
-          </label>
-        </div>
-        <div class="row">
-          <label>Tags (comma‑separated)
-            <input type="text" id="postTags" placeholder="marketing, printing, dogs, veterans" />
-          </label>
-        </div>
-        <div class="row grid-2">
-          <label>Contact Email
-            <input type="email" id="postEmail" required placeholder="you@example.com" />
-          </label>
-          <label>Access Key (to manage/evaluate)
-            <input type="password" id="postKey" required placeholder="Choose a secret key" />
-          </label>
-        </div>
-        <div class="row">
-          <label>Evaluation Parameters (free‑form)
-            <input type="text" id="postEval" placeholder="e.g., budget ≤ $500; turnaround ≤ 7 days" />
-          </label>
-        </div>
-        <input type="hidden" id="postLat">
-        <input type="hidden" id="postLng">
+        <label for="criteriaSelect">Selection Criteria</label>
+        <select id="criteriaSelect">
+          <option value="">-- Select --</option>
+          <option value="income">Income Level</option>
+          <option value="homeowners">Homeownership</option>
+          <option value="lifestyle">Lifestyle</option>
+          <option value="business">Business Type</option>
+        </select>
 
-        <div class="row">
-          <button id="submitPostBtn" type="submit">Create Post</button>
-          <span id="postStatus" class="status"></span>
+        <button id="applyCriteriaBtn" class="secondary-btn">Apply Criteria</button>
+      </section>
+
+      <section class="sidebar-section">
+        <h2>Notes</h2>
+        <textarea id="notesField" placeholder="Enter notes here..."></textarea>
+      </section>
+
+      <section class="sidebar-section">
+        <h2>Results Summary</h2>
+        <div id="resultStats">
+          <p><strong>Total Points in View:</strong> <span id="pointCount">0</span></p>
+          <p><strong>Within Radius:</strong> <span id="radiusCount">0</span></p>
+          <p><strong>Filtered Matches:</strong> <span id="criteriaCount">0</span></p>
         </div>
-      </form>
+      </section>
+    </aside>
 
-      <hr/>
-
-      <h3>Manage My Posts</h3>
-      <form id="ownerForm" class="row grid-3">
-        <label>Email <input type="email" id="ownerEmail" placeholder="you@example.com" /></label>
-        <label>Access Key <input type="password" id="ownerKey" placeholder="your key" /></label>
-        <button id="loadMyPostsBtn" type="button">Load My Posts</button>
-      </form>
-      <div id="myPosts" class="list"></div>
-    </section>
-
-    <section class="panel hidden" id="searcherPanel">
-      <h2>Search & Respond</h2>
-      <form id="searchForm" class="row grid-3">
-        <label>Keywords <input type="text" id="q" placeholder="search text…" /></label>
-        <label>Tags (comma) <input type="text" id="tags" placeholder="e.g., printing, dogs" /></label>
-        <button id="runSearchBtn" type="submit">Search</button>
-      </form>
-      <div id="searchStatus" class="status"></div>
-      <div id="resultsMap" class="map"></div>
-      <div id="resultsList" class="list"></div>
+    <!-- MAP CONTAINER -->
+    <section id="mapSection">
+      <div id="map"></div>
     </section>
   </main>
 
-  <template id="postItemTpl">
-    <details class="card">
-      <summary><strong class="title"></strong> <span class="chips tags"></span></summary>
-      <div class="meta">
-        <div><b>PostID:</b> <span class="pid"></span></div>
-        <div><b>Eval Params:</b> <span class="eval"></span></div>
-        <div><b>Lat/Lng:</b> <span class="coords"></span></div>
-      </div>
-      <p class="desc"></p>
-      <div class="responses"></div>
-    </details>
-  </template>
-
-  <template id="responseItemTpl">
-    <div class="response">
-      <div class="row"><b>Responder:</b> <span class="name"></span> &lt;<span class="email"></span>&gt;</div>
-      <p class="message"></p>
-      <form class="evalForm row grid-4">
-        <label>Rating
-          <select name="rating">
-            <option value="">—</option>
-            <option>1</option>
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-            <option>5</option>
-          </select>
-        </label>
-        <label>Status
-          <select name="status">
-            <option value="">pending</option>
-            <option value="accepted">accepted</option>
-            <option value="rejected">rejected</option>
-          </select>
-        </label>
-        <label>Notes
-          <input name="notes" type="text" placeholder="brief notes"/>
-        </label>
-        <button type="submit" class="small">Save</button>
-      </form>
-    </div>
-  </template>
-
-  <template id="respondTpl">
-    <form class="respondForm stack">
-      <h3>Respond to: <span class="title"></span></h3>
-      <p class="desc"></p>
-      <div class="row grid-2">
-        <label>Your Name <input required type="text" name="name" placeholder="Your name"/></label>
-        <label>Your Email <input required type="email" name="email" placeholder="you@example.com"/></label>
-      </div>
-      <label>Message
-        <textarea required name="message" rows="3" placeholder="Your response…"></textarea>
-      </label>
-      <input type="hidden" name="postId"/>
-      <div class="row">
-        <button type="submit">Send Response</button>
-        <button type="button" class="secondary cancelRespond">Cancel</button>
-        <span class="status"></span>
-      </div>
-    </form>
-  </template>
-
-  <div id="modal" class="modal hidden">
-    <div class="modal-content">
-      <button id="modalClose" class="modal-close" aria-label="Close">×</button>
+  <!-- MODALS -->
+  <div id="modalOverlay" class="hidden">
+    <div id="modalContent" class="modal">
+      <button id="modalClose" class="modal-close">&times;</button>
       <div id="modalBody"></div>
     </div>
   </div>
-<!-- === Marker Popup Templates === -->
-<template id="popupPosterTpl">
-  <div class="popup-menu">
-    <b class="popup-title"></b><br/>
-    <button class="popup-btn btnTarget">🎯 Target Market</button>
-    <button class="popup-btn btnPost">📝 Post</button>
-    <button class="popup-btn btnEdit">✏️ Edit</button>
-  </div>
-</template>
 
-<template id="popupSearcherTpl">
-  <div class="popup-menu">
-    <b class="popup-title"></b><br/>
-    <button class="popup-btn btnPosts">📄 Posts</button>
-    <button class="popup-btn btnProfile">👤 Profile</button>
-    <button class="popup-btn btnRefer">🔗 Refer</button>
-  </div>
-</template>
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2025 Accel Analysis | Industrial Diplomacy Division</p>
+  </footer>
 
-<!-- === Modals for Popup Actions === -->
-<div id="modalTargetMarket" class="modal hidden">
-  <div class="modal-content">
-    <button class="modal-close" data-close="modalTargetMarket">×</button>
-    <h2>Target Market</h2>
-    <form id="targetForm" class="stack">
-      <label>Base Radius (mi)
-        <input type="number" id="tmBaseRadius" value="0.5" min="0.1" step="0.1">
-      </label>
-      <label>Ring Count
-        <input type="number" id="tmRingCount" value="3" min="1" max="6">
-      </label>
-      <label>Distance Increment (mi)
-        <input type="number" id="tmIncrement" value="0.5" min="0.1" step="0.1">
-      </label>
-      <button type="submit">Apply</button>
-    </form>
-    <div id="tmMapPreview" class="map" style="height:300px;margin-top:10px;"></div>
-    <div id="tmSummary" class="stack small"></div>
-    <button id="btnOrderMailers" class="hidden">📬 Order Direct Mailers</button>
-  </div>
-</div>
+  <!-- DEPENDENCIES -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha512-vLZfM1r87gqfUlnItp8qG0O8N1XLx1TqBQFwqHobfCzKpIYfQ7zjDA3SeGSOxgAvXxJkncJbD4PUoAc4n1iT9w=="
+    crossorigin=""></script>
 
-<div id="modalEditPin" class="modal hidden">
-  <div class="modal-content">
-    <button class="modal-close" data-close="modalEditPin">×</button>
-    <h2>Edit Pin</h2>
-    <form id="editPinForm" class="stack">
-      <label>Title <input type="text" id="editPinTitle"></label>
-      <label>Icon
-        <select id="editPinIcon">
-          <option value="default">Default</option>
-          <option value="business">Business</option>
-          <option value="home">Home</option>
-          <option value="project">Project</option>
-        </select>
-      </label>
-      <label>Visibility
-        <select id="editPinVisibility">
-          <option value="public">Public</option>
-          <option value="private">Private</option>
-        </select>
-      </label>
-      <button type="submit">Save</button>
-    </form>
-  </div>
-</div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- CONFIG + SHARED + APP -->
   <script src="config.js"></script>
   <script src="shared.js"></script>
   <script src="app.js"></script>
