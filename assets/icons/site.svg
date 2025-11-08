@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+  <!-- Site Pin: Blue with Gold Flag -->
+  <defs>
+    <linearGradient id="siteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2F5597"/>
+      <stop offset="100%" stop-color="#1E3A6B"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 1C8.5 1 4 5.5 4 11c0 8.8 10 15 10 15s10-6.2 10-15c0-5.5-4.5-10-10-10z" fill="url(#siteGrad)" stroke="#FFD965" stroke-width="1.5"/>
+  <circle cx="14" cy="11" r="4" fill="#FFD965"/>
+</svg>
