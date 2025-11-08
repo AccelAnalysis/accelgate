@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accel Mailer | Interactive Map Console</title>
+  <title>Accel Mailer | Map-Based Targeting & Proposal Builder</title>
 
   <!-- Leaflet CSS -->
   <link
@@ -15,28 +15,47 @@
 
   <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
-
-  <!-- Font & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* --- Map visibility & layout safety net --- */
+    #map {
+      width: 100%;
+      height: calc(100vh - 120px);
+      min-height: 500px;
+      background: #dce6f5;
+    }
+
+    /* fallback in case CSS fails to load */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #mainContainer {
+      display: flex;
+      height: calc(100vh - 80px);
+      overflow: hidden;
+    }
+  </style>
 </head>
 
 <body>
   <!-- HEADER BAR -->
   <header id="mainHeader">
     <div class="header-left">
-      <h1>Accel Mailer</h1>
-      <p class="subtitle">Map-Based Targeting & Proposal Builder</p>
+      <h1 style="margin:0;">Map-Based Targeting & Proposal Builder</h1>
     </div>
 
     <div class="header-right">
       <div class="mode-switch">
-        <label>Mode:</label>
+        <label for="viewMode" style="color:#fff; font-weight:600; margin-right:0.4rem;">Mode:</label>
         <select id="viewMode">
           <option value="poster">Poster / Evaluator</option>
           <option value="searcher">Searcher / Responder</option>
         </select>
       </div>
-      <button id="resetMapBtn" class="primary-btn">Reset Map</button>
+      <button id="resetMapBtn" class="secondary-btn">Reset Map</button>
     </div>
   </header>
 
@@ -76,7 +95,7 @@
       </section>
     </aside>
 
-    <!-- MAP CONTAINER -->
+    <!-- MAP SECTION -->
     <section id="mapSection">
       <div id="map"></div>
     </section>
@@ -96,13 +115,31 @@
   </footer>
 
   <!-- DEPENDENCIES -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha512-vLZfM1r87gqfUlnItp8qG0O8N1XLx1TqBQFwqHobfCzKpIYfQ7zjDA3SeGSOxgAvXxJkncJbD4PUoAc4n1iT9w=="
-    crossorigin=""></script>
+    crossorigin=""
+  ></script>
 
-  <!-- CONFIG + SHARED + APP -->
+  <!-- Core Scripts -->
   <script src="config.js"></script>
   <script src="shared.js"></script>
   <script src="app.js"></script>
+
+  <!-- Map Render Fix -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // fallback: ensure map renders even if loaded in hidden state
+      setTimeout(() => {
+        const mapDiv = document.getElementById("map");
+        if (mapDiv && mapDiv._leaflet_id) {
+          const leafletInstance = L.DomUtil.get(mapDiv._leaflet_id);
+          if (leafletInstance && leafletInstance.invalidateSize) leafletInstance.invalidateSize();
+        } else if (window.map && map.invalidateSize) {
+          map.invalidateSize();
+        }
+      }, 500);
+    });
+  </script>
 </body>
 </html>
