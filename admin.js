@@ -1,234 +1,329 @@
 /******************************************************
- * Accel Mailer Platform - Admin Console Logic
+ * Accel RFP Platform - Admin Dashboard Logic
  * ----------------------------------------------------
- * Provides CRUD operations for:
- *   • Config defaults (Config sheet)
- *   • Pricing tiers (Pricing sheet)
- *   • Submitted proposals (Proposals sheet)
+ * Full CRUD for:
+ *   • Config defaults
+ *   • Pricing tiers
+ *   • RFP Templates (Fields + Scoring JSON)
+ *   • RFP review
+ *   • Response auto-ranking & evaluation
  * ----------------------------------------------------
- * Depends on: config.js, shared.js
+ * Depends on: config.js, shared.js, admin.html
  ******************************************************/
 
-let pricingTable = [];
-let proposals = [];
-let configDefaults = {};
+let pricingData = [];
+let templateData = [];
+let rfpData = [];
+let responseData = [];
+let evaluationData = [];
 
 /******************************************************
- * 1️⃣ INITIALIZATION
+ * 1. INITIALIZATION
  ******************************************************/
 document.addEventListener("DOMContentLoaded", async () => {
   bindUI();
-  await loadConfigDefaults();
-  await loadPricingList();
-  await loadProposals();
+  await Promise.all([
+    loadConfig(),
+    loadPricing(),
+    loadTemplates(),
+    loadRFPs(),
+    loadEvaluations()
+  ]);
 });
 
 /******************************************************
- * 2️⃣ EVENT BINDINGS
+ * 2. EVENT BINDINGS
  ******************************************************/
 function bindUI() {
-  // === Navigation ===
-  document.getElementById("backToFormBtn").addEventListener("click", () => {
-    window.location.href = "proposal.html";
+  // Navigation
+  document.getElementById("backToMapBtn").addEventListener("click", () => {
+    window.location.href = "index.html";
   });
 
-  // === Config Form ===
+  // Forms
   document.getElementById("configForm").addEventListener("submit", saveConfig);
+  document.getElementById("pricingForm").addEventListener("submit", savePricing);
+  document.getElementById("templateForm").addEventListener("submit", saveTemplate);
 
-  // === Pricing Form ===
-  document.getElementById("pricingForm").addEventListener("submit", savePricingTier);
-  document.getElementById("refreshPricingBtn").addEventListener("click", loadPricingList);
+  // Refresh buttons
+  document.getElementById("refreshPricingBtn").addEventListener("click", loadPricing);
+  document.getElementById("refreshTemplatesBtn").addEventListener("click", loadTemplates);
+  document.getElementById("refreshRFPsBtn").addCustomListener("click", loadRFPs);
+  document.getElementById("refreshEvalsBtn").addEventListener("click", loadEvaluations);
 
-  // === Proposals Section ===
-  document.getElementById("refreshProposalsBtn").addEventListener("click", loadProposals);
-  document.getElementById("proposalSearch").addEventListener("input", filterProposals);
+  // Search & Filter
+  document.getElementById("rfpSearch").addEventListener("input", filterRFPs);
+  document.getElementById("evalRFPFilter").addEventListener("change", filterEvaluations);
 }
 
 /******************************************************
- * 3️⃣ LOAD CONFIG DEFAULTS
+ * 3. CONFIG
  ******************************************************/
-async function loadConfigDefaults() {
+async function loadConfig() {
   try {
-    const response = await Shared.fetchGet(Config.ROUTES.getConfig);
-    if (response?.data && Array.isArray(response.data)) {
-      configDefaults = Object.fromEntries(response.data.map((r) => [r.Field, r.Value]));
-      populateConfigForm();
-      Config.DEBUG.log("Loaded Config Defaults:", configDefaults);
-    } else {
-      console.warn("Config response invalid or empty.");
-    }
+    const res = = await Shared.fetchGet(Config.ROUTES.getConfig);
+    const config = Object.fromEntries(
+      (res?.data || []).map(r => [r.Field, r.Value])
+    );
+    Shared.populateForm(document.getElementById("configForm"), {
+      DefaultRadius: config.DefaultRadius || Config.DEFAULTS.radiusMiles,
+      DefaultZoom: config.DefaultZoom || Config.DEFAULTS.zoomLevel,
+      MinQuantity: config.MinQuantity || Config.DEFAULTS.minQuantity
+    });
   } catch (err) {
-    console.error("Failed to load config defaults:", err);
-    Shared.showMessage("Error loading configuration defaults.", "error");
+    Shared.showMessage("Failed to load config.", "error");
   }
 }
 
-function populateConfigForm() {
-  document.getElementById("DefaultRadius").value =
-    configDefaults.DefaultRadius || Config.DEFAULTS.radiusMiles;
-  document.getElementById("DefaultAudienceType").value =
-    configDefaults.DefaultAudienceType || Config.DEFAULTS.audienceType;
-  document.getElementById("DefaultMailType").value =
-    configDefaults.DefaultMailType || Config.DEFAULTS.mailType;
-}
-
-/******************************************************
- * 4️⃣ SAVE CONFIG DEFAULTS
- ******************************************************/
 async function saveConfig(e) {
   e.preventDefault();
   const data = Shared.formToJSON(e.target);
   const payload = Shared.buildPayload(data);
-  Shared.showMessage("Saving defaults...", "info");
-
   try {
-    const result = await Shared.fetchPost(Config.ROUTES.saveConfig, payload);
-    if (result && !result.error) {
-      Shared.showMessage("Defaults saved successfully!", "success");
-      await loadConfigDefaults();
-    } else {
-      throw new Error(result.message || "Save failed");
+    const res = await Shared.fetchPost(Config.ROUTES.saveConfig, payload);
+    if (res.success) {
+      Shared.showMessage("Config saved.", "success");
     }
   } catch (err) {
-    console.error("Save config error:", err);
-    Shared.showMessage("Failed to save defaults.", "error");
+    Shared.showMessage("Save failed.", "error");
   }
 }
 
 /******************************************************
- * 5️⃣ LOAD & RENDER PRICING TABLE
+ * 4. PRICING
  ******************************************************/
-async function loadPricingList() {
-  const tableBody = document.querySelector("#pricingTable tbody");
-  tableBody.innerHTML = `<tr><td colspan="7">Loading...</td></tr>`;
-
+async function loadPricing() {
   try {
-    const response = await Shared.fetchGet(Config.ROUTES.getPricing);
-    pricingTable = response?.data || [];
-    renderPricingTable(pricingTable);
+    const res = await Shared.fetchGet(Config.ROUTES.getPricing);
+    pricingData = res?.data || [];
+    renderPricingTable();
   } catch (err) {
-    console.error("Failed to load pricing:", err);
-    Shared.showMessage("Error loading pricing tiers.", "error");
+    Shared.showMessage("Failed to load pricing.", "error");
   }
 }
 
-function renderPricingTable(list) {
-  const tableBody = document.querySelector("#pricingTable tbody");
-  tableBody.innerHTML = "";
-
-  if (!list.length) {
-    tableBody.innerHTML = `<tr><td colspan="7">No pricing tiers found.</td></tr>`;
-    return;
-  }
-
-  list.forEach((p) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${p.MailType || ""}</td>
-      <td>${p.Size || ""}</td>
-      <td>${Number(p.BaseRate || 0).toFixed(2)}</td>
-      <td>${p.StepQty || ""}</td>
-      <td>${Number(p.StepRate || 0).toFixed(2)}</td>
-      <td>${p.Description || ""}</td>
-      <td>${p.Active || ""}</td>
+function renderPricingTable() {
+  const tbody = document.querySelector("#pricingTable tbody");
+  tbody.innerHTML = "";
+  pricingData.forEach(p => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.MailType}</td>
+      <td>${p.Size}</td>
+      <td>$${Number(p.BaseRate).toFixed(2)}</td>
+      <td>${p.StepQty}</td>
+      <td>$${Number(p.StepRate).toFixed(2)}</td>
+      <td>${p.Description}</td>
+      <td>${p.Active}</td>
+      <td>
+        <button class="btn-small btn-secondary" onclick="editPricing('${p.MailType}', '${p.Size}')">Edit</button>
+      </td>
     `;
-    row.addEventListener("click", () => populatePricingForm(p));
-    tableBody.appendChild(row);
+    tbody.appendChild(tr);
   });
-
-  Shared.showMessage(`Loaded ${list.length} pricing tiers.`, "success");
 }
 
-/******************************************************
- * 6️⃣ SAVE / UPDATE PRICING TIER
- ******************************************************/
-async function savePricingTier(e) {
+window.editPricing = (mailType, size) => {
+  const tier = pricingData.find(p => p.MailType === mailType && p.Size === size);
+  if (tier) {
+    Shared.populateForm(document.getElementById("pricingForm"), tier);
+  }
+};
+
+async function savePricing(e) {
   e.preventDefault();
   const data = Shared.formToJSON(e.target);
-  const payload = Shared.buildPayload(data);
-  Shared.showMessage("Saving pricing tier...", "info");
-
   try {
-    const result = await Shared.fetchPost(Config.ROUTES.savePricing, payload);
-    if (result && !result.error) {
-      Shared.showMessage("Pricing tier saved successfully!", "success");
+    const res = await Shared.fetchPost(Config.ROUTES.savePricing, data);
+    if (res.success) {
+      Shared.showMessage("Pricing tier saved.", "success");
       e.target.reset();
-      await loadPricingList();
-    } else {
-      throw new Error(result.message || "Save failed");
+      loadPricing();
     }
   } catch (err) {
-    console.error("Save pricing error:", err);
-    Shared.showMessage("Failed to save pricing tier.", "error");
+    Shared.showMessage("Save failed.", "error");
   }
 }
 
-function populatePricingForm(p) {
-  document.getElementById("MailType").value = p.MailType || "";
-  document.getElementById("Size").value = p.Size || "";
-  document.getElementById("BaseRate").value = p.BaseRate || "";
-  document.getElementById("StepQty").value = p.StepQty || "";
-  document.getElementById("StepRate").value = p.StepRate || "";
-  document.getElementById("Description").value = p.Description || "";
-  document.getElementById("Active").value = p.Active || "TRUE";
-  Shared.showMessage("Loaded pricing tier for editing.", "info");
-}
-
 /******************************************************
- * 7️⃣ LOAD & RENDER PROPOSALS
+ * 5. TEMPLATES
  ******************************************************/
-async function loadProposals() {
-  const tableBody = document.querySelector("#proposalTable tbody");
-  tableBody.innerHTML = `<tr><td colspan="10">Loading proposals...</td></tr>`;
-
+async function loadTemplates() {
   try {
-    const response = await Shared.fetchGet(Config.ROUTES.getProposals);
-    proposals = response?.data || [];
-    renderProposalsTable(proposals);
+    const res = await Shared.fetchGet(Config.ROUTES.getTemplates);
+    templateData = res?.data || [];
+    renderTemplatesTable();
   } catch (err) {
-    console.error("Failed to load proposals:", err);
-    Shared.showMessage("Error loading proposals.", "error");
+    Shared.showMessage("Failed to load templates.", "error");
   }
 }
 
-function renderProposalsTable(list) {
-  const tableBody = document.querySelector("#proposalTable tbody");
-  tableBody.innerHTML = "";
-
-  if (!list.length) {
-    tableBody.innerHTML = `<tr><td colspan="10">No proposals found.</td></tr>`;
-    return;
-  }
-
-  list.forEach((p) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${p.Timestamp || ""}</td>
-      <td>${p.BusinessName || ""}</td>
-      <td>${p.ContactName || ""}</td>
-      <td>${p.Email || ""}</td>
-      <td>${p.Phone || ""}</td>
-      <td>${p.MailType || ""}</td>
-      <td>${p.Quantity || ""}</td>
-      <td>$${Number(p.EstimatedTotal || 0).toLocaleString()}</td>
-      <td>${p.RadiusMiles || ""}</td>
-      <td>${p.Status || "Pending"}</td>
+function renderTemplatesTable() {
+  const tbody = document.querySelector("#templatesTable tbody");
+  tbody.innerHTML = "";
+  templateData.forEach(t => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${t.Name}</td>
+      <td>${t.Industry}</td>
+      <td><pre style="max-height:60px;overflow:auto;font-size:0.8rem;">${t.FieldsJSON}</pre></td>
+      <td><pre style="max-height:60px;overflow:auto;font-size:0.8rem;">${t.ScoringJSON}</pre></td>
+      <td>${t.Active}</td>
+      <td>
+        <button class="btn-small btn-secondary" onclick="editTemplate('${t.TemplateID}')">Edit</button>
+      </td>
     `;
-    tableBody.appendChild(row);
+    tbody.appendChild(tr);
   });
+}
 
-  Shared.showMessage(`Loaded ${list.length} proposals.`, "success");
+window.editTemplate = (id) => {
+  const tmpl = templateData.find(t => t.TemplateID === id);
+  if (tmpl) {
+    Shared.populateForm(document.getElementById("templateForm"), {
+      TemplateID: tmpl.TemplateID,
+      Name: tmpl.Name,
+      Industry: tmpl.Industry,
+      Active: tmpl.Active,
+      FieldsJSON: tmpl.FieldsJSON,
+      ScoringJSON: tmpl.ScoringJSON
+    });
+  }
+};
+
+async function saveTemplate(e) {
+  e.preventDefault();
+  const data = Shared.formToJSON(e.target);
+  data.Fields = JSON.parse(data.FieldsJSON || "[]");
+  data.Scoring = JSON.parse(data.ScoringJSON || "{}");
+  try {
+    const res = await Shared.fetchPost(Config.ROUTES.saveTemplate, data);
+    if (res.success) {
+      Shared.showMessage("Template saved.", "success");
+      e.target.reset();
+      loadTemplates();
+    }
+  } catch (err) {
+    Shared.showMessage("Invalid JSON or save failed.", "error");
+  }
 }
 
 /******************************************************
- * 8️⃣ FILTER PROPOSALS
+ * 6. RFPS
  ******************************************************/
-function filterProposals(e) {
-  const term = e.target.value.toLowerCase();
-  const filtered = proposals.filter(
-    (p) =>
-      (p.BusinessName && p.BusinessName.toLowerCase().includes(term)) ||
-      (p.Email && p.Email.toLowerCase().includes(term))
-  );
-  renderProposalsTable(filtered);
+async function loadRFPs() {
+  try {
+    const res = await Shared.fetchGet(Config.ROUTES.getRFPs);
+    rfpData = res?.data || [];
+    renderRFPsTable();
+    populateRFPFilter();
+  } catch (err) {
+    Shared.showMessage("Failed to load RFPs.", "error");
+  }
 }
+
+function renderRFPsTable(filtered = rfpData) {
+  const tbody = document.querySelector("#rfpsTable tbody");
+  tbody.innerHTML = "";
+  filtered.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.RFP_ID.slice(0,8)}</td>
+      <td>${r.Title}</td>
+      <td>${r.Organization}</td>
+      <td>${r.ContactName}</td>
+      <td>${r.RadiusMiles}</td>
+      <td>${r.Status}</td>
+      <td>${r.Published}</td>
+      <td>${countResponses(r.RFP_ID)}</td>
+      <td>
+        <button class="btn-small btn-secondary" onclick="viewRFP('${r.RFP_ID}')">View</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function countResponses(rfpID) {
+  return responseData.filter(r => r.RFP_ID === rfpID).length;
+}
+
+function filterRFPs() {
+  const term = document.getElementById("rfpSearch").value.toLowerCase();
+  const filtered = rfpData.filter(r =>
+    r.Title.toLowerCase().includes(term) ||
+    r.Organization.toLowerCase().includes(term)
+  );
+  renderRFPsTable(filtered);
+}
+
+window.viewRFP = (id) => {
+  window.open(`proposal.html?mode=poster&edit=${id}`, "_blank");
+};
+
+/******************************************************
+ * 7. EVALUATIONS
+ ******************************************************/
+async function loadEvaluations() {
+  try {
+    const [respRes, evalRes] = await Promise.all([
+      Shared.fetchGet(Config.ROUTES.getResponses),
+      Shared.fetchGet(Config.ROUTES.getEvaluations)
+    ]);
+    responseData = respRes?.data || [];
+    evaluationData = evalRes?.data || [];
+    renderEvaluationsTable();
+  } catch (err) {
+    Shared.showMessage("Failed to load evaluations.", "error");
+  }
+}
+
+function renderEvaluationsTable() {
+  const tbody = document.querySelector("#evaluationsTable tbody");
+  tbody.innerHTML = "";
+  const filtered = filterByRFP(evaluationData);
+  filtered.forEach(e => {
+    const resp = responseData.find(r => r.ResponseID === e.ResponseID) || {};
+    const rfp = rfpData.find(r => r.RFP_ID === e.RFP_ID) || {};
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${e.ResponseID.slice(0,8)}</td>
+      <td>${rfp.Title || "—"}</td>
+      <td>${resp.ResponderName || "—"}</td>
+      <td>${e.Score}</td>
+      <td>${e.Rank || "?"}</td>
+      <td>${e.ThresholdPass === "TRUE" ? "Yes" : "No"}</td>
+      <td>${new Date(e.EvaluatedAt).toLocaleDateString()}</td>
+      <td>
+        <button class="btn-small btn-secondary" onclick="viewResponse('${e.ResponseID}')">View</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterByRFP(data) {
+  const rfpID = document.getElementById("evalRFPFilter").value;
+  return rfpID ? data.filter(e => e.RFP_ID === rfpID) : data;
+}
+
+function populateRFPFilter() {
+  const select = document.getElementById("evalRFPFilter");
+  select.innerHTML = `<option value="">-- All RFPs --</option>`;
+  rfpData.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.RFP_ID;
+    opt.textContent = `${r.Title} (${r.RFP_ID.slice(0,8)})`;
+    select.appendChild(opt);
+  });
+}
+
+function filterEvaluations() {
+  renderEvaluationsTable();
+}
+
+window.viewResponse = (id) => {
+  alert(`Response JSON:\n${JSON.stringify(
+    responseData.find(r => r.ResponseID === id)?.ResponseJSON || {}, null, 2
+  )}`);
+};
