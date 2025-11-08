@@ -1,204 +1,181 @@
 /******************************************************
- * Accel Mailer Platform - Shared Utility Library
+ * Accel RFP Platform - Shared Utility Library
  * ----------------------------------------------------
- * Provides universal helpers for:
- *   • Fetching data from Apps Script
- *   • Submitting JSON payloads
- *   • Serializing and deserializing form data
- *   • Caching, logging, and UI utilities
+ * Universal helpers for:
+ *   • fetchGet / fetchPost (Apps Script backend)
+ *   • Form serialization & population
+ *   • Local cache (localStorage)
+ *   • Toast notifications
+ *   • Timestamp & payload helpers
  * ----------------------------------------------------
- * Depends on: config.js
- * Author: Accel Analysis
+ * Depends on: config.js (must load first)
+ * Used by: app.js, proposal.js, admin.js
  ******************************************************/
 
 if (!window.Config) {
-  console.error("Config.js must be loaded before Shared.js");
+  throw new Error("config.js must be loaded before shared.js");
 }
 
 /******************************************************
- * 1️⃣ UNIVERSAL FETCH WRAPPERS
+ * 1. FETCH WRAPPERS
  ******************************************************/
-
-/**
- * Perform a GET request to the Apps Script backend.
- * @param {string} route - The endpoint URL (from Config.ROUTES or Config.ENDPOINTS).
- * @param {object} [params] - Optional query parameters as key/value pairs.
- * @returns {Promise<object>} Parsed JSON response.
- */
 async function fetchGet(route, params = {}) {
   const url = new URL(route);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== null && v !== undefined) url.searchParams.append(k, v);
+  });
 
+  Config.DEBUG.log("GET →", url.toString());
   try {
-    Config.DEBUG.log("GET:", url.toString());
     const res = await fetch(url, { method: "GET", cache: "no-cache" });
-    if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    Config.DEBUG.log("GET Response:", data);
+    Config.DEBUG.log("GET ←", data);
     return data;
   } catch (err) {
-    console.error("Fetch GET error:", err);
+    Config.DEBUG.error("fetchGet failed:", err);
     return { error: true, message: err.message };
   }
 }
 
-/**
- * Perform a POST request to the Apps Script backend.
- * @param {string} route - The endpoint URL (from Config.ROUTES or Config.ENDPOINTS).
- * @param {object} payload - The JSON payload to send.
- * @returns {Promise<object>} Parsed JSON response.
- */
-async function fetchPost(route, payload) {
+async function fetchPost(route, payload = {}) {
+  Config.DEBUG.log("POST →", route, payload);
   try {
-    Config.DEBUG.log("POST:", route, payload);
     const res = await fetch(route, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       cache: "no-cache",
     });
-    if (!res.ok) throw new Error(`POST ${route} failed: ${res.status}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    Config.DEBUG.log("POST Response:", data);
+    Config.DEBUG.log("POST ←", data);
     return data;
   } catch (err) {
-    console.error("Fetch POST error:", err);
+    Config.DEBUG.error("fetchPost failed:", err);
     return { error: true, message: err.message };
   }
 }
 
 /******************************************************
- * 2️⃣ FORM SERIALIZATION UTILITIES
+ * 2. FORM UTILITIES
  ******************************************************/
-
-/**
- * Convert a standard HTML form into a JSON object.
- * @param {HTMLFormElement} form - The form element.
- * @returns {object} Key/value pairs representing form data.
- */
 function formToJSON(form) {
   const data = {};
   const fd = new FormData(form);
   for (const [key, value] of fd.entries()) {
-    data[key] = value.trim();
+    const trimmed = typeof value === "string" ? value.trim() : value;
+    data[key] = trimmed;
   }
   return data;
 }
 
-/**
- * Populate a form with values from a JSON object.
- * @param {HTMLFormElement} form - The form element.
- * @param {object} data - Key/value pairs to populate.
- */
 function populateForm(form, data) {
   Object.entries(data).forEach(([key, value]) => {
     const el = form.querySelector(`[name="${key}"]`);
     if (!el) return;
     if (el.type === "checkbox" || el.type === "radio") {
       el.checked = !!value;
+    } else if (el.tagName === "SELECT" && el.multiple) {
+      const opts = Array.from(el.options);
+      opts.forEach(opt => opt.selected = (value || []).includes(opt.value));
     } else {
-      el.value = value;
+      el.value = value ?? "";
     }
   });
 }
 
 /******************************************************
- * 3️⃣ STORAGE & CACHE HELPERS
+ * 3. LOCAL CACHE
  ******************************************************/
-
-/**
- * Save an object to localStorage.
- * @param {string} key
- * @param {object} data
- */
-function saveCache(key, data) {
+function saveCache(key, obj) {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(key, JSON.stringify(obj));
     Config.DEBUG.log("Cache saved:", key);
-  } catch (err) {
-    console.warn("Cache save failed:", err);
+  } catch (e) {
+    console.warn("localStorage save failed:", e);
   }
 }
 
-/**
- * Retrieve an object from localStorage.
- * @param {string} key
- * @param {boolean} [parse=true] Whether to parse JSON.
- * @returns {any}
- */
 function loadCache(key, parse = true) {
-  const val = localStorage.getItem(key);
-  if (!val) return null;
-  return parse ? JSON.parse(val) : val;
+  try {
+    const val = localStorage.getItem(key);
+    return parse && val ? JSON.parse(val) : val;
+  } catch (e) {
+    console.warn("localStorage load failed:", e);
+    return null;
+  }
 }
 
-/**
- * Remove an item from localStorage.
- * @param {string} key
- */
 function clearCache(key) {
   localStorage.removeItem(key);
 }
 
 /******************************************************
- * 4️⃣ SHEET & DATA HELPERS
+ * 4. PAYLOAD & TIME HELPERS
  ******************************************************/
-
-/**
- * Create a timestamp in the same format as Google Sheets.
- * @returns {string} Formatted timestamp
- */
 function timestamp() {
   return new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
 }
 
-/**
- * Build a standardized proposal or response payload.
- * @param {object} formData - The serialized form data.
- * @param {object} [extra] - Additional fields to merge.
- * @returns {object} Final payload with timestamp and metadata.
- */
 function buildPayload(formData, extra = {}) {
   return {
     Timestamp: timestamp(),
     ...formData,
     ...extra,
-    appVersion: Config.APP_INFO.version,
+    _version: Config.APP_INFO.version
   };
 }
 
 /******************************************************
- * 5️⃣ ERROR & STATUS UTILITIES
+ * 5. TOAST NOTIFICATIONS
  ******************************************************/
+function showMessage(message, type = "info", duration = 3500) {
+  const colors = {
+    success: "#27ae60",
+    error: "#c0392b",
+    info: "#2980b9",
+    warning: "#f39c12"
+  };
+  const bg = colors[type] || colors.info;
 
-/**
- * Display a toast notification or fallback alert.
- * @param {string} message - Message to show.
- * @param {"success"|"error"|"info"} [type="info"] - Type of notification.
- */
-function showMessage(message, type = "info") {
-  const color = type === "error" ? "#c0392b" : type === "success" ? "#27ae60" : "#2980b9";
   const toast = document.createElement("div");
   toast.textContent = message;
   Object.assign(toast.style, {
     position: "fixed",
     bottom: "20px",
     right: "20px",
-    background: color,
-    color: "white",
-    padding: "10px 16px",
+    background: bg,
+    color: "#fff",
+    padding: "12px 20px",
     borderRadius: "8px",
     fontSize: "14px",
-    zIndex: 9999,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-    opacity: "0.95",
+    fontWeight: "600",
+    zIndex: 10000,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    opacity: 0,
+    transform: "translateY(20px)",
+    transition: "all 0.3s ease",
+    maxWidth: "320px",
+    wordWrap: "break-word"
   });
+
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
+
+  // Trigger reflow
+  toast.offsetHeight;
+  toast.style.opacity = 1;
+  toast.style.transform = "translateY(0)";
+
+  setTimeout(() => {
+    toast.style.opacity = 0;
+    toast.style.transform = "translateY(20px)";
+    toast.addEventListener("transitionend", () => toast.remove());
+  }, duration);
 }
 
 /******************************************************
- * 6️⃣ EXPORTS
+ * 6. EXPORT
  ******************************************************/
 window.Shared = {
   fetchGet,
@@ -210,5 +187,5 @@ window.Shared = {
   clearCache,
   timestamp,
   buildPayload,
-  showMessage,
+  showMessage
 };
