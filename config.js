@@ -15,7 +15,7 @@
 const ENVIRONMENT = "prod"; // "dev" | "prod"
 
 // === GOOGLE SHEET CONFIG ===
-const SHEET_ID = "1AbCdEfGhIjKlMnOpQrStUvWxYz1234567890"; // REPLACE WITH YOUR SHEET ID
+const SHEET_ID = "10wq0EhBALOZ3nQI63nZBbE1p3_jErxeP3xFjmkagavA"; // REPLACE WITH YOUR SHEET ID
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
 
 // === SHEET TAB NAMES ===
@@ -30,7 +30,7 @@ const SHEET_ADMINS     = "Admins";
 // === GOOGLE APPS SCRIPT WEB APP URL ===
 // Deploy → New Deployment → Web App → Execute as: Me → Who has access: Anyone
 // Paste the EXEC URL below after deployment
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx.../exec"; // REPLACE AFTER DEPLOYMENT
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyN7nj_UrThpxHFl6s_TS-F1BcOrgDA4L5KGUFzENLk788urumFR6LeaVwVKrVCNAIO/exec"; // REPLACE AFTER DEPLOYMENT
 
 // === API ENDPOINTS ===
 const ROUTES = {
