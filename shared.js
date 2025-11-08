@@ -7,9 +7,9 @@
  *   • Local cache (localStorage)
  *   • Toast notifications
  *   • Timestamp & payload helpers
+ *   • NEW: Geocoding + Real Scoring Engine
  * ----------------------------------------------------
  * Depends on: config.js (must load first)
- * Used by: app.js, proposal.js, admin.js
  ******************************************************/
 
 if (!window.Config) {
@@ -58,7 +58,78 @@ async function fetchPost(route, payload = {}) {
 }
 
 /******************************************************
- * 2. FORM UTILITIES
+ * 2. GEOCODING (Nominatim – no API key)
+ ******************************************************/
+async function geocodeAddress(address) {
+  if (!address || address.trim() === "") return null;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address.trim())}`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'AccelRFP/1.1 (contact@accelanalysis.com)' }
+    });
+    const data = await res.json();
+    if (data && data[0]) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+    throw new Error("No results found");
+  } catch (err) {
+    Config.DEBUG.error("Geocode failed:", err);
+    return null;
+  }
+}
+
+/******************************************************
+ * 3. REAL SCORING ENGINE
+ *    - Uses Template.ScoringJSON weights
+ *    - Auto-scores numeric/range/select fields
+ *    - Normalizes to 0–100 scale
+ ******************************************************/
+function calculateScore(responses, scoringWeights, fieldDefinitions = []) {
+  if (!responses || !scoringWeights) return { score: 0, details: {} };
+
+  const weights = scoringWeights;
+  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0) || 100;
+  let weightedScore = 0;
+  const details = {};
+
+  // Auto-score supported field types
+  fieldDefinitions.forEach(field => {
+    const key = field.name;
+    const weight = weights[key] || 0;
+    if (weight === 0) return;
+
+    const value = responses[key];
+    let fieldScore = 0;
+
+    if (Config.SCORING.AUTO_SCORE_FIELDS.includes(field.type)) {
+      // Assume max value = 10 for range/select, or use actual max
+      const max = field.max || 10;
+      fieldScore = (parseFloat(value) || 0) / max * 100;
+    } else if (field.type === "text" || field.type === "textarea") {
+      // Simple length-based heuristic (fallback)
+      const len = (value || "").length;
+      fieldScore = Math.min(len / 200, 1) * 100;
+    }
+
+    const contribution = (fieldScore * weight) / 100;
+    weightedScore += contribution;
+    details[key] = { value, fieldScore: fieldScore.toFixed(1), weight, contribution: contribution.toFixed(1) };
+  });
+
+  // Normalize to 0–100
+  const finalScore = Math.round((weightedScore / totalWeight) * 100);
+  const pass = finalScore >= Config.DEFAULTS.passThreshold;
+
+  return {
+    score: finalScore,
+    pass,
+    details,
+    normalized: true
+  };
+}
+
+/******************************************************
+ * 4. FORM UTILITIES
  ******************************************************/
 function formToJSON(form) {
   const data = {};
@@ -86,7 +157,7 @@ function populateForm(form, data) {
 }
 
 /******************************************************
- * 3. LOCAL CACHE
+ * 5. LOCAL CACHE
  ******************************************************/
 function saveCache(key, obj) {
   try {
@@ -112,7 +183,7 @@ function clearCache(key) {
 }
 
 /******************************************************
- * 4. PAYLOAD & TIME HELPERS
+ * 6. PAYLOAD & TIME HELPERS
  ******************************************************/
 function timestamp() {
   return new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
@@ -128,7 +199,7 @@ function buildPayload(formData, extra = {}) {
 }
 
 /******************************************************
- * 5. TOAST NOTIFICATIONS
+ * 7. TOAST NOTIFICATIONS
  ******************************************************/
 function showMessage(message, type = "info", duration = 3500) {
   const colors = {
@@ -175,11 +246,13 @@ function showMessage(message, type = "info", duration = 3500) {
 }
 
 /******************************************************
- * 6. EXPORT
+ * 8. EXPORT
  ******************************************************/
 window.Shared = {
   fetchGet,
   fetchPost,
+  geocodeAddress,
+  calculateScore,
   formToJSON,
   populateForm,
   saveCache,
