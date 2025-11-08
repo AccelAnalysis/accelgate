@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accel Mailer | Map-Based Targeting & Proposal Builder</title>
+  <title>Accel RFP | Interactive Map Console</title>
 
   <!-- Leaflet CSS -->
   <link
@@ -16,46 +16,24 @@
   <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    /* --- Map visibility & layout safety net --- */
-    #map {
-      width: 100%;
-      height: calc(100vh - 120px);
-      min-height: 500px;
-      background: #dce6f5;
-    }
-
-    /* fallback in case CSS fails to load */
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    #mainContainer {
-      display: flex;
-      height: calc(100vh - 80px);
-      overflow: hidden;
-    }
-  </style>
 </head>
 
 <body>
-  <!-- HEADER BAR -->
+  <!-- HEADER -->
   <header id="mainHeader">
     <div class="header-left">
-      <h1 style="margin:0;">Map-Based Targeting & Proposal Builder</h1>
+      <h1>Accel RFP</h1>
+      <p class="subtitle">Map-Based RFP Publishing & Response</p>
     </div>
-
     <div class="header-right">
       <div class="mode-switch">
-        <label for="viewMode" style="color:#fff; font-weight:600; margin-right:0.4rem;">Mode:</label>
+        <label for="viewMode">Mode:</label>
         <select id="viewMode">
           <option value="poster">Poster / Evaluator</option>
-          <option value="searcher">Searcher / Responder</option>
+          <option value="responder">Searcher / Responder</option>
         </select>
       </div>
-      <button id="resetMapBtn" class="secondary-btn">Reset Map</button>
+      <button id="resetMapBtn" class="btn-primary">Reset Map</button>
     </div>
   </header>
 
@@ -64,82 +42,68 @@
     <!-- SIDEBAR -->
     <aside id="sidebar">
       <section class="sidebar-section">
-        <h2>Targeting Controls</h2>
+        <h2>Map Controls</h2>
         <label for="radiusSize">Radius (miles)</label>
-        <input type="number" id="radiusSize" min="1" max="25" value="3" />
+        <input type="number" id="radiusSize" min="1" max="50" value="5" />
 
-        <label for="criteriaSelect">Selection Criteria</label>
+        <label for="criteriaSelect">Filter Criteria</label>
         <select id="criteriaSelect">
-          <option value="">-- Select --</option>
-          <option value="income">Income Level</option>
-          <option value="homeowners">Homeownership</option>
-          <option value="lifestyle">Lifestyle</option>
-          <option value="business">Business Type</option>
+          <option value="">-- Any --</option>
+          <option value="construction">Construction</option>
+          <option value="it">IT Services</option>
+          <option value="marketing">Marketing</option>
+          <option value="logistics">Logistics</option>
         </select>
 
-        <button id="applyCriteriaBtn" class="secondary-btn">Apply Criteria</button>
+        <button id="applyCriteriaBtn" class="btn-secondary">Apply Filter</button>
       </section>
 
       <section class="sidebar-section">
         <h2>Notes</h2>
-        <textarea id="notesField" placeholder="Enter notes here..."></textarea>
+        <textarea id="notesField" placeholder="Add notes for this RFP or response..."></textarea>
       </section>
 
       <section class="sidebar-section">
-        <h2>Results Summary</h2>
+        <h2>Summary</h2>
         <div id="resultStats">
-          <p><strong>Total Points in View:</strong> <span id="pointCount">0</span></p>
+          <p><strong>RFPs in View:</strong> <span id="rfpCount">0</span></p>
           <p><strong>Within Radius:</strong> <span id="radiusCount">0</span></p>
           <p><strong>Filtered Matches:</strong> <span id="criteriaCount">0</span></p>
         </div>
       </section>
+
+      <section class="sidebar-section">
+        <button id="createRFPBtn" class="btn-primary" style="width:100%;">Create New RFP</button>
+      </section>
     </aside>
 
-    <!-- MAP SECTION -->
+    <!-- MAP -->
     <section id="mapSection">
       <div id="map"></div>
     </section>
   </main>
 
-  <!-- MODALS -->
+  <!-- MODAL OVERLAY -->
   <div id="modalOverlay" class="hidden">
     <div id="modalContent" class="modal">
-      <button id="modalClose" class="modal-close">&times;</button>
+      <button id="modalClose" class="modal-close">x</button>
       <div id="modalBody"></div>
     </div>
   </div>
 
   <!-- FOOTER -->
   <footer>
-    <p>&copy; 2025 Accel Analysis | Industrial Diplomacy Division</p>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy Division</p>
   </footer>
 
-  <!-- DEPENDENCIES -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha512-vLZfM1r87gqfUlnItp8qG0O8N1XLx1TqBQFwqHobfCzKpIYfQ7zjDA3SeGSOxgAvXxJkncJbD4PUoAc4n1iT9w=="
-    crossorigin=""
-  ></script>
+    crossorigin=""></script>
 
   <!-- Core Scripts -->
   <script src="config.js"></script>
   <script src="shared.js"></script>
   <script src="app.js"></script>
-
-  <!-- Map Render Fix -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // fallback: ensure map renders even if loaded in hidden state
-      setTimeout(() => {
-        const mapDiv = document.getElementById("map");
-        if (mapDiv && mapDiv._leaflet_id) {
-          const leafletInstance = L.DomUtil.get(mapDiv._leaflet_id);
-          if (leafletInstance && leafletInstance.invalidateSize) leafletInstance.invalidateSize();
-        } else if (window.map && map.invalidateSize) {
-          map.invalidateSize();
-        }
-      }, 500);
-    });
-  </script>
 </body>
 </html>
