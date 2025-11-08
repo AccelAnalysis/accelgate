@@ -1,197 +1,323 @@
 /******************************************************
- * Accel Mailer Platform - Proposal Form Logic
+ * Accel RFP Platform - Proposal Form Logic
  * ----------------------------------------------------
- * Handles proposal creation, prefill defaults,
- * dynamic pricing calculation, and submission.
+ * Features:
+ *   • Dual Mode: Poster (create/edit RFP) vs Responder (submit bid)
+ *   • Template-driven dynamic fields
+ *   • Map center click + radius
+ *   • Scoring criteria preview (Poster only)
+ *   • Auto-save draft (localStorage)
+ *   • Submit → saveRFP / saveResponse
  * ----------------------------------------------------
- * Depends on: config.js, shared.js
+ * Depends on: config.js, shared.js, proposal.html
  ******************************************************/
 
 let proposalMap;
-let pricingTable = [];
-let configDefaults = {};
+let centerMarker = null;
+let radiusRing = null;
+let templates = [];
+let currentTemplate = null;
+let formMode = "poster"; // poster | responder
+let editRFP_ID = null;
 
 /******************************************************
- * 1️⃣ INITIALIZATION
+ * 1. INITIALIZATION
  ******************************************************/
 document.addEventListener("DOMContentLoaded", async () => {
   initMap();
   bindUI();
-  await loadDefaults();
-  await loadPricing();
+  await loadTemplates();
+  parseURLParams();
+  loadDraft();
+  updateFormMode();
 });
 
 /******************************************************
- * 2️⃣ LOAD CONFIG DEFAULTS
+ * 2. URL PARAMS & MODE
  ******************************************************/
-async function loadDefaults() {
-  try {
-    const response = await Shared.fetchGet(Config.ROUTES.getConfig);
-    if (response?.data && Array.isArray(response.data)) {
-      configDefaults = Object.fromEntries(
-        response.data.map((r) => [r.Field, r.Value])
-      );
-      applyDefaults();
-      Config.DEBUG.log("Config defaults loaded:", configDefaults);
-    } else {
-      console.warn("Config fetch returned empty or invalid.");
-    }
-  } catch (err) {
-    console.error("Config load failed:", err);
-    Shared.showMessage("Failed to load default settings.", "error");
-  }
+function parseURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  formMode = params.get("mode") || "poster";
+  editRFP_ID = params.get("edit") || params.get("rfp");
+
+  document.getElementById("formMode").value = formMode;
+  if (editRFP_ID) document.getElementById("editRFP_ID").value = editRFP_ID;
 }
 
-function applyDefaults() {
-  document.getElementById("RadiusMiles").value =
-    configDefaults.DefaultRadius || Config.DEFAULTS.radiusMiles;
-  document.getElementById("AudienceType").value =
-    configDefaults.DefaultAudienceType || Config.DEFAULTS.audienceType;
-  document.getElementById("MailType").value =
-    configDefaults.DefaultMailType || "Postcard 4x6";
-}
+function updateFormMode() {
+  const isPoster = formMode === "poster";
+  document.getElementById("formSubtitle").textContent = 
+    isPoster ? "Create or Edit RFP" : "Submit Response to RFP";
+  document.getElementById("submitBtn").textContent = 
+    isPoster ? "Publish RFP" : "Submit Response";
 
-/******************************************************
- * 3️⃣ LOAD PRICING TABLE
- ******************************************************/
-async function loadPricing() {
-  try {
-    const response = await Shared.fetchGet(Config.ROUTES.getPricing);
-    if (response?.data && Array.isArray(response.data)) {
-      pricingTable = response.data.filter((r) => r.Active === "TRUE" || r.Active === true);
-      Config.DEBUG.log("Pricing table loaded:", pricingTable);
-    } else {
-      console.warn("Pricing fetch returned empty or invalid.");
-    }
-  } catch (err) {
-    console.error("Pricing load failed:", err);
-    Shared.showMessage("Failed to load pricing data.", "error");
+  // Hide scoring for responders
+  document.getElementById("scoringPreviewSection").style.display = 
+    isPoster ? "block" : "none";
+
+  if (!isPoster && editRFP_ID) {
+    loadRFPForResponse(editRFP_ID);
   }
 }
 
 /******************************************************
- * 4️⃣ MAP INITIALIZATION
+ * 3. LOAD TEMPLATES
+ ******************************************************/
+async function loadTemplates() {
+  try {
+    const res = await Shared.fetchGet(Config.ROUTES.getTemplates);
+    templates = res?.data || [];
+    populateTemplateSelect();
+  } catch (err) {
+    Shared.showMessage("Failed to load templates.", "error");
+  }
+}
+
+function populateTemplateSelect() {
+  const select = document.getElementById("TemplateSelect");
+  select.innerHTML = `<option value="">-- Select Template --</option>`;
+  templates.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.TemplateID;
+    opt.textContent = `${t.Name} (${t.Industry})`;
+    select.appendChild(opt);
+  });
+}
+
+/******************************************************
+ * 4. MAP SETUP
  ******************************************************/
 function initMap() {
   proposalMap = L.map("proposalMap", {
-    center: [37.09, -95.71], // Default to US center
-    zoom: 4,
-    zoomControl: true,
+    center: Config.DEFAULTS.mapCenter,
+    zoom: Config.DEFAULTS.zoomLevel,
   });
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
   }).addTo(proposalMap);
 
-  // Add radius ring when clicked
   proposalMap.on("click", (e) => {
-    const miles = parseFloat(document.getElementById("RadiusMiles").value) || 3;
-    drawProposalRing(e.latlng, miles);
+    setMapCenter(e.latlng);
   });
 
-  Config.DEBUG.log("Proposal map initialized.");
+  Config.DEBUG.log("Proposal map ready.");
 }
 
-function drawProposalRing(center, miles) {
-  // Clear previous rings
-  proposalMap.eachLayer((layer) => {
-    if (layer instanceof L.Circle) proposalMap.removeLayer(layer);
-  });
+function setMapCenter(latlng) {
+  // Update hidden fields
+  document.getElementById("Lat") ? document.getElementById("Lat").value = latlng.lat.toFixed(6) : null;
+  document.getElementById("Lng") ? document.getElementById("Lng").value = latlng.lng.toFixed(6) : null;
 
-  L.circle(center, {
+  // Add/update marker
+  if (centerMarker) centerMarker.setLatLng(latlng);
+  else centerMarker = L.marker(latlng).addTo(proposalMap);
+
+  // Update radius ring
+  const miles = parseFloat(document.getElementById("RadiusMiles").value) || 5;
+  if (radiusRing) proposalMap.removeLayer(radiusRing);
+  radiusRing = L.circle(latlng, {
     radius: miles * 1609.34,
     color: Config.DEFAULTS.themeColor,
-    fillOpacity: 0.05,
+    fillOpacity: 0.1,
+    weight: 2
   }).addTo(proposalMap);
 
-  Config.DEBUG.log(`Drew ring at ${center.lat}, ${center.lng} (${miles} mi)`);
+  saveDraft();
 }
 
 /******************************************************
- * 5️⃣ UI EVENT BINDINGS
+ * 5. DYNAMIC FIELDS FROM TEMPLATE
  ******************************************************/
-function bindUI() {
-  const form = document.getElementById("proposalForm");
-  const qtyInput = document.getElementById("Quantity");
-  const mailTypeSelect = document.getElementById("MailType");
+document.getElementById("TemplateSelect").addEventListener("change", async (e) => {
+  const templateID = e.target.value;
+  currentTemplate = templates.find(t => t.TemplateID === templateID);
+  if (!currentTemplate) return;
 
-  qtyInput.addEventListener("input", updateEstimate);
-  mailTypeSelect.addEventListener("change", updateEstimate);
+  const fields = JSON.parse(currentTemplate.FieldsJSON || "[]");
+  const scoring = JSON.parse(currentTemplate.ScoringJSON || "{}");
 
-  form.addEventListener("submit", onSubmitProposal);
+  renderDynamicFields(fields);
+  renderScoringPreview(scoring);
+  saveDraft();
+});
 
-  document.getElementById("backToMapBtn").addEventListener("click", () => {
-    window.location.href = "index.html";
-  });
-}
+function renderDynamicFields(fields) {
+  const container = document.getElementById("dynamicFields");
+  container.innerHTML = "";
 
-/******************************************************
- * 6️⃣ ESTIMATION CALCULATION
- ******************************************************/
-function updateEstimate() {
-  const mailType = document.getElementById("MailType").value;
-  const qty = parseInt(document.getElementById("Quantity").value) || 0;
-
-  if (!pricingTable.length) {
-    Shared.showMessage("Pricing not yet loaded.", "info");
+  if (!fields.length) {
+    container.innerHTML = "<p><em>No custom fields defined in this template.</em></p>";
     return;
   }
 
-  const tier = pricingTable.find(
-    (p) => p.MailType === mailType || p.Size === mailType
-  );
+  fields.forEach(field => {
+    const div = document.createElement("div");
+    div.className = "form-grid";
+    div.innerHTML = `
+      <label>${field.label}
+        ${field.type === "textarea" 
+          ? `<textarea name="${field.name}" ${field.required ? "required" : ""}></textarea>`
+          : `<input type="${field.type}" name="${field.name}" ${field.required ? "required" : ""} />`
+        }
+      </label>
+    `;
+    container.appendChild(div);
+  });
+}
 
-  const baseRate = parseFloat(tier?.BaseRate || 0);
-  const stepQty = parseInt(tier?.StepQty || 500);
-  const stepRate = parseFloat(tier?.StepRate || baseRate);
-  const perPieceRate = qty >= stepQty ? stepRate : baseRate;
-  const total = qty * perPieceRate;
+function renderScoringPreview(scoring) {
+  const preview = document.getElementById("scoringPreview");
+  if (!scoring || Object.keys(scoring).length === 0) {
+    preview.innerHTML = "<p><em>No scoring criteria defined.</em></p>";
+    return;
+  }
 
-  document.getElementById("baseRate").textContent = `$${baseRate.toFixed(2)}`;
-  document.getElementById("ratePerPiece").textContent = `$${perPieceRate.toFixed(2)}`;
-  document.getElementById("estTotal").textContent = `$${total.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-  Config.DEBUG.log("Estimate updated:", { mailType, qty, baseRate, perPieceRate, total });
+  let html = "<ul>";
+  for (const [key, weight] of Object.entries(scoring)) {
+    html += `<li><strong>${key}:</strong> ${weight}%</li>`;
+  }
+  html += "</ul>";
+  preview.innerHTML = html;
 }
 
 /******************************************************
- * 7️⃣ FORM SUBMISSION
+ * 6. LOAD RFP FOR RESPONSE (Responder Mode)
  ******************************************************/
-async function onSubmitProposal(e) {
-  e.preventDefault();
+async function loadRFPForResponse(rfpID) {
+  try {
+    const res = await Shared.fetchGet(Config.ROUTES.getRFPs);
+    const rfp = res?.data?.find(r => r.RFP_ID === rfpID);
+    if (!rfp) throw new Error("RFP not found");
 
-  const form = document.getElementById("proposalForm");
-  const data = Shared.formToJSON(form);
-  const miles = parseFloat(document.getElementById("RadiusMiles").value);
-  const total = document.getElementById("estTotal").textContent.replace(/[^0-9.]/g, "");
+    // Populate static fields
+    Shared.populateForm(document.getElementById("rfpForm"), {
+      Title: `[Response] ${rfp.Title}`,
+      Organization: "",
+      ContactName: "",
+      Email: "",
+      Phone: "",
+      RadiusMiles: rfp.RadiusMiles,
+      ZipsCities: rfp.ZipsCities || ""
+    });
 
-  const payload = Shared.buildPayload(data, {
-    EstimatedTotal: parseFloat(total),
-    RadiusMiles: miles,
-    appVersion: Config.APP_INFO.version,
-  });
+    // Set map center
+    const lat = parseFloat(rfp.Lat), lng = parseFloat(rfp.Lng);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      const latlng = L.latLng(lat, lng);
+      proposalMap.setView(latlng, 12);
+      setMapCenter(latlng);
+    }
 
-  Shared.showMessage("Submitting proposal...", "info");
-  const result = await Shared.fetchPost(Config.ROUTES.saveProposal, payload);
+    // Load template fields
+    const template = templates.find(t => t.TemplateID === rfp.TemplateID);
+    if (template) {
+      document.getElementById("TemplateSelect").value = template.TemplateID;
+      document.getElementById("TemplateSelect").dispatchEvent(new Event("change"));
+    }
 
-  if (result && !result.error) {
-    Shared.showMessage("Proposal submitted successfully!", "success");
-    form.reset();
-    applyDefaults();
-    updateEstimate();
-  } else {
-    Shared.showMessage("Submission failed. Please try again.", "error");
+    Shared.showMessage("RFP loaded for response.", "success");
+  } catch (err) {
+    Shared.showMessage("Failed to load RFP.", "error");
   }
 }
 
 /******************************************************
- * 8️⃣ OPTIONAL: AUTOFILL EXAMPLE (prefilled proposals)
+ * 7. FORM SUBMISSION
  ******************************************************/
-function prefillProposal(data) {
-  const form = document.getElementById("proposalForm");
-  if (data) Shared.populateForm(form, data);
-  updateEstimate();
+document.getElementById("rfpForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const data = Shared.formToJSON(form);
+
+  // Add lat/lng
+  data.Lat = centerMarker ? centerMarker.getLatLng().lat.toFixed(6) : "";
+  data.Lng = centerMarker ? centerMarker.getLatLng().lng.toFixed(6) : "";
+
+  // Add custom fields
+  const custom = {};
+  document.querySelectorAll("#dynamicFields input, #dynamicFields textarea").forEach(el => {
+    custom[el.name] = el.value;
+  });
+  data.CustomFields = custom;
+
+  const payload = Shared.buildPayload(data);
+
+  Shared.showMessage("Submitting...", "info");
+
+  try {
+    const route = formMode === "poster" ? Config.ROUTES.saveRFP : Config.ROUTES.saveResponse;
+    const result = await Shared.fetchPost(route, payload);
+
+    if (result.success) {
+      Shared.showMessage(
+        formMode === "poster" ? "RFP published!" : "Response submitted!",
+        "success"
+      );
+      clearDraft();
+      setTimeout(() => window.location.href = "index.html", 1500);
+    } else {
+      throw new Error(result.message);
+    }
+  } catch (err) {
+    Shared.showMessage("Submission failed.", "error");
+    Config.DEBUG.error(err);
+  }
+});
+
+/******************************************************
+ * 8. DRAFT AUTO-SAVE
+ ******************************************************/
+function saveDraft() {
+  const data = Shared.formToJSON(document.getElementById("rfpForm"));
+  data._draftLat = centerMarker?.getLatLng().lat;
+  data._draftLng = centerMarker?.getLatLng().lng;
+  Shared.saveCache("rfpDraft", data);
+}
+
+function loadDraft() {
+  const draft = Shared.loadCache("rfpDraft");
+  if (!draft) return;
+
+  Shared.populateForm(document.getElementById("rfpForm"), draft);
+  if (draft._draftLat && draft._draftLng) {
+    const latlng = L.latLng(draft._draftLat, draft._draftLng);
+    proposalMap.setView(latlng, 12);
+    setMapCenter(latlng);
+  }
+  if (draft.TemplateID) {
+    setTimeout(() => {
+      document.getElementById("TemplateSelect").dispatchEvent(new Event("change"));
+    }, 100);
+  }
+}
+
+function clearDraft() {
+  Shared.clearCache("rfpDraft");
+}
+
+/******************************************************
+ * 9. UI BINDINGS
+ ******************************************************/
+function bindUI() {
+  document.getElementById("backToMapBtn").addEventListener("click", () => {
+    if (confirm("Leave without saving?")) {
+      clearDraft();
+      window.location.href = "index.html";
+    }
+  });
+
+  // Auto-save on input
+  document.getElementById("rfpForm").addEventListener("input", () => {
+    setTimeout(saveDraft, 500);
+  });
+
+  // Radius change → update ring
+  document.getElementById("RadiusMiles").addEventListener("input", () => {
+    if (centerMarker) {
+      const miles = parseFloat(document.getElementById("RadiusMiles").value) || 5;
+      radiusRing.setRadius(miles * 1609.34);
+      saveDraft();
+    }
+  });
 }
