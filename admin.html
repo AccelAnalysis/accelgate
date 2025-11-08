@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accel Mailer | Admin Console</title>
+
+  <!-- Styles -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- HEADER -->
+  <header id="mainHeader">
+    <div class="header-left">
+      <h1>Accel Mailer</h1>
+      <p class="subtitle">Administration Dashboard</p>
+    </div>
+    <div class="header-right">
+      <button id="backToFormBtn" class="secondary-btn">Go to Proposal Form</button>
+    </div>
+  </header>
+
+  <!-- MAIN ADMIN CONTAINER -->
+  <main id="adminContainer" class="admin-container">
+
+    <!-- SECTION 1: DEFAULT CONFIG SETTINGS -->
+    <section class="admin-section collapsible">
+      <h2>1. Default Configuration</h2>
+      <form id="configForm" class="admin-form">
+        <div class="form-grid">
+          <label>Default Radius (miles)
+            <input type="number" name="DefaultRadius" id="DefaultRadius" min="1" max="25" required />
+          </label>
+          <label>Default Audience Type
+            <select name="DefaultAudienceType" id="DefaultAudienceType">
+              <option value="Residential">Residential</option>
+              <option value="Business">Business</option>
+              <option value="Mixed">Mixed</option>
+            </select>
+          </label>
+          <label>Default Mail Type
+            <select name="DefaultMailType" id="DefaultMailType">
+              <option value="Postcard 4x6">Postcard 4x6</option>
+              <option value="Postcard 6x9">Postcard 6x9</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="saveConfigBtn" class="primary-btn">Save Defaults</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- SECTION 2: PRICING MANAGEMENT -->
+    <section class="admin-section collapsible">
+      <h2>2. Pricing Management</h2>
+      <form id="pricingForm" class="admin-form">
+        <div class="form-grid">
+          <label>Mail Type
+            <input type="text" id="MailType" name="MailType" placeholder="Postcard 4x6" required />
+          </label>
+          <label>Size
+            <input type="text" id="Size" name="Size" placeholder="4x6" required />
+          </label>
+          <label>Base Rate
+            <input type="number" id="BaseRate" name="BaseRate" step="0.01" required />
+          </label>
+          <label>Step Qty
+            <input type="number" id="StepQty" name="StepQty" min="1" step="1" value="500" />
+          </label>
+          <label>Step Rate
+            <input type="number" id="StepRate" name="StepRate" step="0.01" />
+          </label>
+          <label>Description
+            <input type="text" id="Description" name="Description" />
+          </label>
+          <label>Active
+            <select id="Active" name="Active">
+              <option value="TRUE">TRUE</option>
+              <option value="FALSE">FALSE</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="savePricingBtn" class="primary-btn">Add / Update Tier</button>
+          <button type="button" id="refreshPricingBtn" class="secondary-btn">Refresh List</button>
+        </div>
+      </form>
+
+      <!-- Pricing Table -->
+      <div class="table-container">
+        <table id="pricingTable">
+          <thead>
+            <tr>
+              <th>Mail Type</th>
+              <th>Size</th>
+              <th>Base Rate</th>
+              <th>Step Qty</th>
+              <th>Step Rate</th>
+              <th>Description</th>
+              <th>Active</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 3: PROPOSAL REVIEW -->
+    <section class="admin-section collapsible">
+      <h2>3. Submitted Proposals</h2>
+      <div class="filter-bar">
+        <input type="text" id="proposalSearch" placeholder="Search by Business Name or Email..." />
+        <button id="refreshProposalsBtn" class="secondary-btn">Refresh List</button>
+      </div>
+      <div class="table-container">
+        <table id="proposalTable">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Business</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Mail Type</th>
+              <th>Quantity</th>
+              <th>Estimated Total</th>
+              <th>Radius (mi)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2025 Accel Analysis | Industrial Diplomacy Division</p>
+  </footer>
+
+  <!-- DEPENDENCIES -->
+  <script src="config.js"></script>
+  <script src="shared.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
