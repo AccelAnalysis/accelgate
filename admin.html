@@ -3,14 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accel Mailer | Admin Console</title>
+  <title>Accel RFP | Admin Dashboard</title>
 
-  <!-- Styles -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
-  />
+  <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
@@ -19,83 +14,73 @@
   <!-- HEADER -->
   <header id="mainHeader">
     <div class="header-left">
-      <h1>Accel Mailer</h1>
+      <h1>Accel RFP</h1>
       <p class="subtitle">Administration Dashboard</p>
     </div>
     <div class="header-right">
-      <button id="backToFormBtn" class="secondary-btn">Go to Proposal Form</button>
+      <button id="backToMapBtn" class="btn-secondary">Back to Map</button>
     </div>
   </header>
 
-  <!-- MAIN ADMIN CONTAINER -->
-  <main id="adminContainer" class="admin-container">
+  <main id="mainContainer" class="admin-container">
 
-    <!-- SECTION 1: DEFAULT CONFIG SETTINGS -->
-    <section class="admin-section collapsible">
-      <h2>1. Default Configuration</h2>
+    <!-- SECTION 1: CONFIG DEFAULTS -->
+    <section class="form-section collapsible">
+      <h2>1. System Configuration</h2>
       <form id="configForm" class="admin-form">
         <div class="form-grid">
           <label>Default Radius (miles)
-            <input type="number" name="DefaultRadius" id="DefaultRadius" min="1" max="25" required />
+            <input type="number" name="DefaultRadius" id="DefaultRadius" min="1" max="50" />
           </label>
-          <label>Default Audience Type
-            <select name="DefaultAudienceType" id="DefaultAudienceType">
-              <option value="Residential">Residential</option>
-              <option value="Business">Business</option>
-              <option value="Mixed">Mixed</option>
-            </select>
+          <label>Default Zoom Level
+            <input type="number" name="DefaultZoom" id="DefaultZoom" min="1" max="18" />
           </label>
-          <label>Default Mail Type
-            <select name="DefaultMailType" id="DefaultMailType">
-              <option value="Postcard 4x6">Postcard 4x6</option>
-              <option value="Postcard 6x9">Postcard 6x9</option>
-              <option value="Letter">Letter</option>
-            </select>
+          <label>Minimum Quantity
+            <input type="number" name="MinQuantity" id="MinQuantity" min="1" />
           </label>
         </div>
         <div class="form-actions">
-          <button type="submit" id="saveConfigBtn" class="primary-btn">Save Defaults</button>
+          <button type="submit" class="btn-primary">Save Config</button>
         </div>
       </form>
     </section>
 
-    <!-- SECTION 2: PRICING MANAGEMENT -->
-    <section class="admin-section collapsible">
+    <!-- SECTION 2: PRICING TIERS -->
+    <section class="form-section collapsible">
       <h2>2. Pricing Management</h2>
       <form id="pricingForm" class="admin-form">
         <div class="form-grid">
           <label>Mail Type
-            <input type="text" id="MailType" name="MailType" placeholder="Postcard 4x6" required />
+            <input type="text" name="MailType" placeholder="Postcard 4x6" required />
           </label>
           <label>Size
-            <input type="text" id="Size" name="Size" placeholder="4x6" required />
+            <input type="text" name="Size" placeholder="4x6" required />
           </label>
           <label>Base Rate
-            <input type="number" id="BaseRate" name="BaseRate" step="0.01" required />
+            <input type="number" name="BaseRate" step="0.01" required />
           </label>
           <label>Step Qty
-            <input type="number" id="StepQty" name="StepQty" min="1" step="1" value="500" />
+            <input type="number" name="StepQty" min="1" value="500" />
           </label>
           <label>Step Rate
-            <input type="number" id="StepRate" name="StepRate" step="0.01" />
+            <input type="number" name="StepRate" step="0.01" />
           </label>
           <label>Description
-            <input type="text" id="Description" name="Description" />
+            <input type="text" name="Description" />
           </label>
           <label>Active
-            <select id="Active" name="Active">
+            <select name="Active">
               <option value="TRUE">TRUE</option>
               <option value="FALSE">FALSE</option>
             </select>
           </label>
         </div>
         <div class="form-actions">
-          <button type="submit" id="savePricingBtn" class="primary-btn">Add / Update Tier</button>
-          <button type="button" id="refreshPricingBtn" class="secondary-btn">Refresh List</button>
+          <button type="submit" class="btn-primary">Save Tier</button>
+          <button type="button" id="refreshPricingBtn" class="btn-secondary">Refresh</button>
         </div>
       </form>
 
-      <!-- Pricing Table -->
       <div class="table-container">
         <table id="pricingTable">
           <thead>
@@ -107,6 +92,7 @@
               <th>Step Rate</th>
               <th>Description</th>
               <th>Active</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -114,41 +100,125 @@
       </div>
     </section>
 
-    <!-- SECTION 3: PROPOSAL REVIEW -->
-    <section class="admin-section collapsible">
-      <h2>3. Submitted Proposals</h2>
-      <div class="filter-bar">
-        <input type="text" id="proposalSearch" placeholder="Search by Business Name or Email..." />
-        <button id="refreshProposalsBtn" class="secondary-btn">Refresh List</button>
-      </div>
+    <!-- SECTION 3: RFP TEMPLATES -->
+    <section class="form-section collapsible">
+      <h2>3. RFP Templates</h2>
+      <form id="templateForm" class="admin-form">
+        <input type="hidden" name="TemplateID" id="TemplateID" />
+        <div class="form-grid">
+          <label>Template Name
+            <input type="text" name="Name" id="TemplateName" required />
+          </label>
+          <label>Industry
+            <input type="text" name="Industry" id="TemplateIndustry" required />
+          </label>
+          <label>Active
+            <select name="Active" id="TemplateActive">
+              <option value="TRUE">TRUE</option>
+              <option value="FALSE">FALSE</option>
+            </select>
+          </label>
+        </div>
+
+        <h3 style="margin-top:1rem;">Custom Fields (JSON)</h3>
+        <textarea name="FieldsJSON" id="FieldsJSON" rows="6" placeholder='[
+  {"name": "budget", "label": "Budget Range", "type": "text", "required": true},
+  {"name": "timeline", "label": "Project Timeline", "type": "textarea"}
+]'></textarea>
+
+        <h3>Scoring Weights (JSON)</h3>
+        <textarea name="ScoringJSON" id="ScoringJSON" rows="4" placeholder='{
+  "Cost": 40,
+  "Timeline": 30,
+  "Experience": 20,
+  "Innovation": 10
+}'></textarea>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Save Template</button>
+          <button type="button" id="refreshTemplatesBtn" class="btn-secondary">Refresh</button>
+        </div>
+      </form>
+
       <div class="table-container">
-        <table id="proposalTable">
+        <table id="templatesTable">
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Business</th>
-              <th>Contact</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Mail Type</th>
-              <th>Quantity</th>
-              <th>Estimated Total</th>
-              <th>Radius (mi)</th>
-              <th>Status</th>
+              <th>Name</th>
+              <th>Industry</th>
+              <th>Fields</th>
+              <th>Scoring</th>
+              <th>Active</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
+
+    <!-- SECTION 4: RFP REVIEW -->
+    <section class="form-section collapsible">
+      <h2>4. Published RFPs</h2>
+      <div class="filter-bar" style="margin-bottom:1rem; display:flex; gap:0.5rem;">
+        <input type="text" id="rfpSearch" placeholder="Search by title or organization..." style="flex:1;" />
+        <button id="refreshRFPsBtn" class="btn-secondary">Refresh</button>
+      </div>
+      <div class="table-container">
+        <table id="rfpsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Org</th>
+              <th>Contact</th>
+              <th>Radius</th>
+              <th>Status</th>
+              <th>Published</th>
+              <th>Responses</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: RESPONSE EVALUATION -->
+    <section class="form-section collapsible">
+      <h2>5. Response Evaluation & Ranking</h2>
+      <div class="filter-bar" style="margin-bottom:1rem; display:flex; gap:0.5rem;">
+        <select id="evalRFPFilter" style="flex:1;">
+          <option value="">-- All RFPs --</option>
+        </select>
+        <button id="refreshEvalsBtn" class="btn-secondary">Refresh</button>
+      </div>
+      <div class="table-container">
+        <table id="evaluationsTable">
+          <thead>
+            <tr>
+              <th>Response ID</th>
+              <th>RFP</th>
+              <th>Responder</th>
+              <th>Score</th>
+              <th>Rank</th>
+              <th>Pass</th>
+              <th>Evaluated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 
-  <!-- FOOTER -->
   <footer>
-    <p>&copy; 2025 Accel Analysis | Industrial Diplomacy Division</p>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy Division</p>
   </footer>
 
-  <!-- DEPENDENCIES -->
+  <!-- Core Scripts -->
   <script src="config.js"></script>
   <script src="shared.js"></script>
   <script src="admin.js"></script>
