@@ -1,105 +1,122 @@
 /******************************************************
- * Accel Mailer Platform - Configuration File
+ * Accel RFP Platform - Configuration File
  * ----------------------------------------------------
- * Defines Google Apps Script endpoints, Sheet tab names,
- * versioning metadata, and platform-wide constants.
+ * Central source of truth for:
+ *   • Google Apps Script Web App URL
+ *   • Google Sheet ID & structure
+ *   • API endpoints (GET/POST)
+ *   • Default values & UI constants
+ *   • Debug mode & environment
  * ----------------------------------------------------
- * Author: Accel Analysis
- * Version: v1.0.0 (Apps Script Deployment)
+ * Used by: shared.js, app.js, proposal.js, admin.js
  ******************************************************/
 
-// === SYSTEM ENVIRONMENT SETTINGS ===
-// Set this to "prod" when deployed as a live web app, or "dev" for localhost testing
-const ENVIRONMENT = "prod";  // "dev" | "prod"
+// === ENVIRONMENT ===
+const ENVIRONMENT = "prod"; // "dev" | "prod"
 
-// === GOOGLE SHEET CONFIGURATION ===
-const SHEET_ID = "10wq0EhBALOZ3nQI63nZBbE1p3_jErxeP3xFjmkagavA"; // Google Sheet ID from /d/<ID>/edit
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/10wq0EhBALOZ3nQI63nZBbE1p3_jErxeP3xFjmkagavA/edit`;
+// === GOOGLE SHEET CONFIG ===
+const SHEET_ID = "1AbCdEfGhIjKlMnOpQrStUvWxYz1234567890"; // REPLACE WITH YOUR SHEET ID
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
 
 // === SHEET TAB NAMES ===
-const SHEET_PROPOSALS = "Proposals";
-const SHEET_PRICING   = "Pricing";
-const SHEET_ADMINS    = "Admins";
-const SHEET_CONFIG    = "Config";
-const SHEET_RESPONSES = "Responses";
+const SHEET_CONFIG     = "Config";
+const SHEET_PRICING    = "Pricing";
+const SHEET_TEMPLATES  = "Templates";
+const SHEET_RFPS       = "RFPs";
+const SHEET_RESPONSES  = "Responses";
+const SHEET_EVALUATIONS = "Evaluations";
+const SHEET_ADMINS     = "Admins";
 
-// === GOOGLE APPS SCRIPT ENDPOINTS ===
-// Replace this URL with your actual published Web App endpoint
-// (Deploy → New Deployment → Web App → "Anyone with the link" access)
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyN7nj_UrThpxHFl6s_TS-F1BcOrgDA4L5KGUFzENLk788urumFR6LeaVwVKrVCNAIO/exec";
+// === GOOGLE APPS SCRIPT WEB APP URL ===
+// Deploy → New Deployment → Web App → Execute as: Me → Who has access: Anyone
+// Paste the EXEC URL below after deployment
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx.../exec"; // REPLACE AFTER DEPLOYMENT
 
-// === FRONTEND DATA ENDPOINTS (Derived) ===
-const ENDPOINTS = {
-  proposals: `${SCRIPT_URL}?type=proposals`,
-  pricing:   `${SCRIPT_URL}?type=pricing`,
-  config:    `${SCRIPT_URL}?type=config`,
-  responses: `${SCRIPT_URL}?type=responses`,
-  admin:     `${SCRIPT_URL}?type=admin`
+// === API ENDPOINTS ===
+const ROUTES = {
+  // Config
+  getConfig:    `${SCRIPT_URL}?action=getConfig`,
+  saveConfig:   `${SCRIPT_URL}?action=saveConfig`,
+
+  // Pricing
+  getPricing:   `${SCRIPT_URL}?action=getPricing`,
+  savePricing:  `${SCRIPT_URL}?action=savePricing`,
+
+  // RFP Templates
+  getTemplates: `${SCRIPT_URL}?action=getTemplates`,
+  saveTemplate: `${SCRIPT_URL}?action=saveTemplate`,
+
+  // RFPs
+  getRFPs:      `${SCRIPT_URL}?action=getRFPs`,
+  saveRFP:      `${SCRIPT_URL}?action=saveRFP`,
+
+  // Responses
+  saveResponse: `${SCRIPT_URL}?action=saveResponse`,
+  getResponses: `${SCRIPT_URL}?action=getResponses`,
+
+  // Evaluations & Scoring
+  evaluateResponse: `${SCRIPT_URL}?action=evaluateResponse`,
+  getEvaluations:   `${SCRIPT_URL}?action=getEvaluations`,
+
+  // Admin
+  getAdmins:    `${SCRIPT_URL}?action=getAdmins`
 };
 
-// === DEFAULT UI SETTINGS ===
+// === DEFAULT UI & SYSTEM VALUES ===
 const DEFAULTS = {
-  radiusMiles: 3,
-  audienceType: "Residential",
-  mailType: "Postcard",
+  radiusMiles: 5,
+  zoomLevel: 10,
   themeColor: "#2F5597",
   highlightColor: "#FFD965",
-  inactiveColor: "#DCE6F5"
+  posterModeColor: "#2F5597",
+  responderModeColor: "#9C27B0",
+  mapCenter: [39.8283, -98.5795], // Geographic center of USA
+  minQuantity: 100,
+  maxRadius: 50
 };
 
-// === APP META INFORMATION ===
+// === APP METADATA ===
 const APP_INFO = {
-  name: "Accel Mailer",
+  name: "Accel RFP Platform",
   version: "1.0.0",
+  description: "Map-based RFP creation, distribution, and automated evaluation system",
   author: "Accel Analysis",
-  updated: "2025-11-08",
-  description: "Direct mail targeting and proposal automation platform."
+  updated: "2025-11-08"
 };
 
-// === APP ROUTING (used by admin and proposal.js) ===
-const ROUTES = {
-  saveProposal: `${SCRIPT_URL}?action=saveProposal`,
-  getProposals: `${SCRIPT_URL}?action=getProposals`,
-  savePricing:  `${SCRIPT_URL}?action=savePricing`,
-  getPricing:   `${SCRIPT_URL}?action=getPricing`,
-  getConfig:    `${SCRIPT_URL}?action=getConfig`,
-  saveConfig:   `${SCRIPT_URL}?action=saveConfig`
-};
-
-// === DEBUGGING UTILITIES ===
+// === DEBUG UTILITIES ===
 const DEBUG = {
   enabled: ENVIRONMENT === "dev",
   log: (...args) => {
-    if (ENVIRONMENT === "dev") console.log("[DEBUG]", ...args);
+    if (ENVIRONMENT === "dev") console.log("[RFP DEBUG]", ...args);
+  },
+  error: (...args) => {
+    console.error("[RFP ERROR]", ...args);
   }
 };
 
-// === EXPORTS (for modular usage) ===
-// These constants are globally available in browser scope.
-// In case of modularization, you can wrap this file in a UMD export.
+// === EXPORT TO WINDOW (for shared.js & page scripts) ===
 window.Config = {
   ENVIRONMENT,
   SHEET_ID,
   SHEET_URL,
   SCRIPT_URL,
-  ENDPOINTS,
+  ROUTES,
   DEFAULTS,
   APP_INFO,
-  ROUTES,
-  SHEET_PROPOSALS,
-  SHEET_PRICING,
-  SHEET_ADMINS,
+  DEBUG,
+  // Sheet names (for reference)
   SHEET_CONFIG,
+  SHEET_PRICING,
+  SHEET_TEMPLATES,
+  SHEET_RFPS,
   SHEET_RESPONSES,
-  DEBUG
+  SHEET_EVALUATIONS,
+  SHEET_ADMINS
 };
 
 /******************************************************
- * Usage Example:
- * 
- *   fetch(Config.ROUTES.saveProposal, { method: 'POST', body: JSON.stringify(payload) })
- *     .then(res => res.json())
- *     .then(data => console.log('Saved proposal:', data));
- *
- *   console.log(`Active Sheet URL: ${Config.SHEET_URL}`);
+ * QUICK TEST (open browser console):
+ *   console.log(Config.ROUTES.getRFPs);
+ *   console.log(Config.SHEET_URL);
  ******************************************************/
