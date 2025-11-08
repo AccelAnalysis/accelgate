@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accel Mailer | Proposal Form</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha512-p5QvY9H5x0p3zv0l7d3uY2D9i4hKxgxM8v4Kk1E6yQIVZ8HjJZtSzmuTqEYsEO4h5l0uVdxkE/F2kcQoo0Tt0w=="
+    crossorigin=""
+  />
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <header id="mainHeader">
+    <div class="header-left">
+      <h1>Accel Mailer</h1>
+      <p class="subtitle">Custom Direct Mail Proposal</p>
+    </div>
+    <div class="header-right">
+      <button id="backToMapBtn" class="secondary-btn">Back to Map</button>
+    </div>
+  </header>
+
+  <main id="mainContainer" class="proposal-container">
+    <form id="proposalForm">
+      <!-- Section 1: Contact Info -->
+      <section class="form-section collapsible">
+        <h2>1. Contact Information</h2>
+        <div class="form-grid">
+          <label>Business Name
+            <input type="text" name="BusinessName" id="BusinessName" required />
+          </label>
+          <label>Contact Name
+            <input type="text" name="ContactName" id="ContactName" required />
+          </label>
+          <label>Email
+            <input type="email" name="Email" id="Email" required />
+          </label>
+          <label>Phone
+            <input type="tel" name="Phone" id="Phone" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Section 2: Targeting & Map -->
+      <section class="form-section collapsible">
+        <h2>2. Targeting Area</h2>
+        <div class="form-grid">
+          <label>Radius (miles)
+            <input type="number" name="RadiusMiles" id="RadiusMiles" value="3" min="1" max="25" />
+          </label>
+          <label>ZIPs / Cities
+            <input type="text" name="ZipsCities" id="ZipsCities" placeholder="e.g., 23320, Chesapeake" />
+          </label>
+          <label>Audience Type
+            <select name="AudienceType" id="AudienceType">
+              <option value="Residential">Residential</option>
+              <option value="Business">Business</option>
+              <option value="Mixed">Mixed</option>
+            </select>
+          </label>
+          <label>Mail Type
+            <select name="MailType" id="MailType">
+              <option value="Postcard 4x6">Postcard 4x6</option>
+              <option value="Postcard 6x9">Postcard 6x9</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </label>
+        </div>
+        <div id="proposalMapContainer">
+          <div id="proposalMap"></div>
+        </div>
+      </section>
+
+      <!-- Section 3: Campaign Details -->
+      <section class="form-section collapsible">
+        <h2>3. Campaign Details</h2>
+        <div class="form-grid">
+          <label>Quantity
+            <input type="number" name="Quantity" id="Quantity" min="250" step="50" required />
+          </label>
+          <label>Budget (optional)
+            <input type="number" name="Budget" id="Budget" min="0" step="1" />
+          </label>
+          <label>Notes
+            <textarea name="Notes" id="Notes" placeholder="Special instructions or requests..."></textarea>
+          </label>
+        </div>
+      </section>
+
+      <!-- Section 4: Estimated Total -->
+      <section class="form-section estimate-panel">
+        <h2>Estimated Total</h2>
+        <div id="estimateDisplay">
+          <p><strong>Base Rate:</strong> <span id="baseRate">$0.00</span></p>
+          <p><strong>Rate per Piece:</strong> <span id="ratePerPiece">$0.00</span></p>
+          <p><strong>Estimated Total:</strong> <span id="estTotal">$0.00</span></p>
+        </div>
+      </section>
+
+      <!-- Submit -->
+      <div class="form-actions">
+        <button type="submit" id="submitProposalBtn" class="primary-btn">Submit Proposal</button>
+      </div>
+    </form>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Accel Analysis | Industrial Diplomacy Division</p>
+  </footer>
+
+  <!-- Dependencies -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha512-vLZfM1r87gqfUlnItp8qG0O8N1XLx1TqBQFwqHobfCzKpIYfQ7zjDA3SeGSOxgAvXxJkncJbD4PUoAc4n1iT9w=="
+    crossorigin=""></script>
+
+  <!-- Config + Shared + Proposal -->
+  <script src="config.js"></script>
+  <script src="shared.js"></script>
+  <script src="proposal.js"></script>
+</body>
+</html>
