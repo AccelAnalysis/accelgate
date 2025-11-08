@@ -1,37 +1,342 @@
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b132b;color:#e6edf3}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#1c2541;border-bottom:1px solid #243b55}
-.topbar h1{margin:0;font-size:18px}
-.role-toggle label{margin-right:12px;cursor:pointer}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}
-.panel{background:#111827;border:1px solid #374151;border-radius:12px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.hidden{display:none}
-.map{height:380px;border-radius:12px;overflow:hidden;border:1px solid #374151;margin:8px 0}
-.map-tools{display:flex;align-items:center;gap:10px}
-.hint{opacity:.8;font-size:12px}
-.stack{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-.row{display:flex;gap:10px;align-items:center;margin:6px 0}
-.grid-2{grid-template-columns:1fr 1fr;display:grid;gap:10px}
-.grid-3{grid-template-columns:1fr 1fr auto;display:grid;gap:10px;align-items:end}
-.grid-4{grid-template-columns:auto auto 1fr auto;display:grid;gap:8px;align-items:end}
-input,textarea,select,button{font:inherit}
-input,textarea,select{width:100%;padding:8px;border-radius:8px;border:1px solid #374151;background:#0b1220;color:#e6edf3}
-button{padding:10px 14px;border-radius:10px;border:1px solid #3b82f6;background:#1d4ed8;color:#fff;cursor:pointer}
-button.secondary{background:#374151;border-color:#4b5563}
-button.small{padding:6px 10px}
-.status{margin-left:8px;opacity:.9}
-.list{margin-top:8px;display:flex;flex-direction:column;gap:10px}
-.card{background:#0b1220;border:1px solid #374151;border-radius:10px;padding:10px}
-.card summary{cursor:pointer;display:flex;gap:10px;align-items:center}
-.card .chips{font-size:12px;opacity:.8}
-.card .meta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;opacity:.85;margin:6px 0}
-.response{border-top:1px dashed #374151;padding-top:8px;margin-top:8px}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:center;padding:20px}
-.modal.hidden{display:none}
-.modal-content{max-width:720px;width:100%;background:#0b1220;border:1px solid #374151;border-radius:12px;position:relative;padding:16px}
-.modal-close{position:absolute;right:10px;top:10px;border:none;background:#374151;border-radius:50%;width:28px;height:28px;cursor:pointer}
-.chips .tag{background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 8px;margin-right:6px}
-.leaflet-container a{color:#60a5fa}
-.popup-menu{display:flex;flex-direction:column;gap:6px}
-.popup-btn{padding:6px 10px;border-radius:6px;border:1px solid #374151;background:#1c2541;color:#e6edf3;cursor:pointer}
-.popup-btn:hover{background:#2f5597}
-.small{font-size:13px}
+/******************************************************
+ * Accel Mailer Unified Stylesheet
+ * ----------------------------------------------------
+ * Applies consistent styling across:
+ *   • index.html (Map Console)
+ *   • proposal.html (Form + Estimate)
+ *   • admin.html (Dashboard)
+ * ----------------------------------------------------
+ * Brand Palette:
+ *   Primary Blue:   #2F5597
+ *   Accent Gold:    #FFD965
+ *   Light Gray:     #DCE6F5
+ *   Dark Gray:      #444
+ *   Background:     #F8FAFD
+ ******************************************************/
+
+/* ========== GLOBAL BASE ========== */
+* {
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  color: #2f5597;
+  margin: 0 0 0.4em;
+}
+
+p {
+  margin: 0.3em 0;
+  line-height: 1.5;
+}
+
+/* Links */
+a {
+  color: #2f5597;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ========== HEADER ========== */
+header#mainHeader {
+  background: #2f5597;
+  color: #fff;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+header .subtitle {
+  font-size: 0.9rem;
+  color: #ffd965;
+}
+header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+header select {
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* ========== BUTTONS ========== */
+button,
+.primary-btn,
+.secondary-btn {
+  cursor: pointer;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.primary-btn {
+  background: #2f5597;
+  color: #fff;
+}
+.primary-btn:hover {
+  background: #24447d;
+}
+
+.secondary-btn {
+  background: #ffd965;
+  color: #2f5597;
+}
+.secondary-btn:hover {
+  background: #f3cc57;
+}
+
+/* ========== SIDEBAR (Index Map Console) ========== */
+#mainContainer {
+  display: flex;
+  flex: 1;
+}
+
+#sidebar {
+  width: 300px;
+  background: #fff;
+  border-right: 1px solid #dce6f5;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  margin-bottom: 1.5rem;
+}
+.sidebar-section h2 {
+  border-bottom: 2px solid #dce6f5;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.6rem;
+  font-size: 1.1rem;
+}
+.sidebar-section input,
+.sidebar-section select,
+.sidebar-section textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.3rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+.sidebar-section textarea {
+  resize: vertical;
+  height: 80px;
+}
+
+/* ========== MAP SECTION ========== */
+#mapSection, #proposalMapContainer {
+  flex: 1;
+  position: relative;
+  background: #f8fafc;
+}
+#map, #proposalMap {
+  width: 100%;
+  height: calc(100vh - 120px);
+  border-left: 2px solid #dce6f5;
+}
+
+/* Leaflet popups */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+.popup-content h3 {
+  margin: 0 0 0.3em;
+  font-size: 1rem;
+}
+.popup-btn {
+  background: #ffd965;
+  color: #2f5597;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.popup-btn:hover {
+  background: #f3cc57;
+}
+
+/* ========== MODALS ========== */
+#modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+#modalOverlay.hidden {
+  display: none;
+}
+.modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+  width: 90%;
+}
+.modal-close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  background: transparent;
+  color: #444;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+/* ========== FORMS (Proposal/Admin) ========== */
+form {
+  width: 100%;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  color: #2f5597;
+}
+
+input, select, textarea {
+  margin-top: 0.3rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  font-size: 0.95rem;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #2f5597;
+  outline: none;
+  box-shadow: 0 0 4px rgba(47, 85, 151, 0.3);
+}
+
+.form-section {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.collapsible h2 {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collapsible h2::after {
+  content: "▾";
+  font-size: 1rem;
+  color: #2f5597;
+}
+.collapsible.collapsed h2::after {
+  transform: rotate(-90deg);
+}
+
+/* ========== ESTIMATE PANEL ========== */
+.estimate-panel {
+  background: #fdfaf0;
+  border: 1px solid #ffd965;
+}
+#estimateDisplay p {
+  font-size: 1rem;
+  margin: 0.4rem 0;
+}
+
+/* ========== TABLES (Admin) ========== */
+.table-container {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+table th, table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+table th {
+  background: #2f5597;
+  color: #fff;
+  font-weight: 600;
+}
+table tbody tr:nth-child(even) {
+  background: #f9fbfd;
+}
+table tbody tr:hover {
+  background: #eaf0fa;
+}
+
+/* ========== FOOTER ========== */
+footer {
+  text-align: center;
+  padding: 1rem;
+  background: #f1f4f8;
+  color: #666;
+  font-size: 0.85rem;
+  border-top: 1px solid #dce6f5;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+  #sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #dce6f5;
+  }
+  #map, #proposalMap {
+    height: 400px;
+  }
+  header#mainHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.modal, .form-section, .sidebar-section {
+  animation: fadeIn 0.3s ease-in-out;
+}
