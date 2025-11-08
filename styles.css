@@ -1,309 +1,317 @@
 /******************************************************
- * Accel Mailer Unified Stylesheet
+ * Accel RFP Platform - Unified Stylesheet
  * ----------------------------------------------------
- * Applies consistent styling across:
+ * Consistent design system across:
  *   • index.html (Map Console)
- *   • proposal.html (Form + Estimate)
+ *   • proposal.html (RFP Form)
  *   • admin.html (Dashboard)
  * ----------------------------------------------------
  * Brand Palette:
- *   Primary Blue:   #2F5597
- *   Accent Gold:    #FFD965
- *   Light Gray:     #DCE6F5
- *   Dark Gray:      #444
- *   Background:     #F8FAFD
+ *   Primary:   #2F5597 (Deep Blue)
+ *   Accent:    #FFD965 (Gold)
+ *   Success:   #27ae60
+ *   Error:     #c0392b
+ *   Info:      #2980b9
+ *   BG:        #F8FAFD
+ *   Card:      #FFFFFF
  ******************************************************/
 
-/* ========== GLOBAL BASE ========== */
-* {
+/* ========== RESET & BASE ========== */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  font-family: "Inter", sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
-  margin: 0;
-  background: #f8fafc;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f8fafd;
   color: #333;
+  line-height: 1.6;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
-h1, h2, h3 {
-  color: #2f5597;
-  margin: 0 0 0.4em;
+/* ========== TYPOGRAPHY ========== */
+h1, h2, h3, h4 {
+  color: #2F5597;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
-p {
-  margin: 0.3em 0;
-  line-height: 1.5;
-}
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.15rem; }
 
-/* Links */
+p { margin-bottom: 0.5rem; }
+
+small { font-size: 0.85rem; color: #666; }
+
+/* ========== LINKS & BUTTONS ========== */
 a {
-  color: #2f5597;
+  color: #2F5597;
   text-decoration: none;
 }
-a:hover {
-  text-decoration: underline;
-}
+a:hover { text-decoration: underline; }
 
-/* ========== HEADER ========== */
-header#mainHeader {
-  background: #2f5597;
-  color: #fff;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-header .subtitle {
-  font-size: 0.9rem;
-  color: #ffd965;
-}
-header .header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-header select {
-  padding: 0.4rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-/* ========== BUTTONS ========== */
 button,
-.primary-btn,
-.secondary-btn {
+.btn {
   cursor: pointer;
+  font-family: inherit;
   font-weight: 600;
   border: none;
   border-radius: 8px;
   padding: 0.6rem 1.2rem;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
-.primary-btn {
-  background: #2f5597;
-  color: #fff;
+.btn-primary {
+  background: #2F5597;
+  color: white;
 }
-.primary-btn:hover {
-  background: #24447d;
+.btn-primary:hover { background: #24447d; }
+
+.btn-secondary {
+  background: #FFD965;
+  color: #2F5597;
+}
+.btn-secondary:hover { background: #f3cc57; }
+
+.btn-small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
 }
 
-.secondary-btn {
-  background: #ffd965;
-  color: #2f5597;
-}
-.secondary-btn:hover {
-  background: #f3cc57;
+/* ========== FORM ELEMENTS ========== */
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1.5px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border 0.2s;
 }
 
-/* ========== SIDEBAR (Index Map Console) ========== */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2F5597;
+  box-shadow: 0 0 0 3px rgba(47, 85, 151, 0.2);
+}
+
+label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: #2F5597;
+}
+
+/* ========== LAYOUT ========== */
+header {
+  background: #2F5597;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+header .subtitle {
+  font-size: 0.9rem;
+  color: #FFD965;
+  margin-top: 0.2rem;
+}
+
+.header-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 #mainContainer {
   display: flex;
   flex: 1;
+  overflow: hidden;
 }
 
+/* ========== SIDEBAR ========== */
 #sidebar {
-  width: 300px;
-  background: #fff;
-  border-right: 1px solid #dce6f5;
+  width: 320px;
+  background: white;
   padding: 1.5rem;
+  border-right: 1px solid #dce6f5;
   overflow-y: auto;
 }
 
 .sidebar-section {
-  margin-bottom: 1.5rem;
-}
-.sidebar-section h2 {
-  border-bottom: 2px solid #dce6f5;
-  padding-bottom: 0.4rem;
-  margin-bottom: 0.6rem;
-  font-size: 1.1rem;
-}
-.sidebar-section input,
-.sidebar-section select,
-.sidebar-section textarea {
-  width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.3rem;
-  margin-bottom: 0.8rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-.sidebar-section textarea {
-  resize: vertical;
-  height: 80px;
+  margin-bottom: 1.8rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
 }
 
-/* ========== MAP SECTION ========== */
-#mapSection, #proposalMapContainer {
+.sidebar-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #dce6f5;
+}
+
+/* ========== MAP ========== */
+#mapSection,
+#proposalMapContainer {
   flex: 1;
   position: relative;
-  background: #f8fafc;
-}
-#map, #proposalMap {
-  width: 100%;
-  height: calc(100vh - 120px);
-  border-left: 2px solid #dce6f5;
 }
 
-/* Leaflet popups */
-.leaflet-popup-content-wrapper {
-  border-radius: 8px;
-}
-.popup-content h3 {
-  margin: 0 0 0.3em;
-  font-size: 1rem;
-}
-.popup-btn {
-  background: #ffd965;
-  color: #2f5597;
-  border: none;
-  border-radius: 6px;
-  padding: 0.4rem 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.popup-btn:hover {
-  background: #f3cc57;
-}
-
-/* ========== MODALS ========== */
-#modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
+#map,
+#proposalMap {
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-#modalOverlay.hidden {
-  display: none;
-}
-.modal {
-  background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-  max-width: 500px;
-  width: 90%;
-}
-.modal-close {
-  position: absolute;
-  right: 1rem;
-  top: 1rem;
-  background: transparent;
-  color: #444;
-  font-size: 1.5rem;
-  border: none;
-  cursor: pointer;
+  min-height: 500px;
 }
 
-/* ========== FORMS (Proposal/Admin) ========== */
-form {
+/* Leaflet Overrides */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 1rem;
+}
+
+.popup-content h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.popup-btn {
+  background: #FFD965;
+  color: #2F5597;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-top: 0.5rem;
   width: 100%;
 }
 
+/* ========== FORMS & GRID ========== */
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-label {
-  display: flex;
-  flex-direction: column;
-  font-weight: 600;
-  color: #2f5597;
-}
-
-input, select, textarea {
-  margin-top: 0.3rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  padding: 0.5rem;
-  font-size: 0.95rem;
-}
-
-input:focus, select:focus, textarea:focus {
-  border-color: #2f5597;
-  outline: none;
-  box-shadow: 0 0 4px rgba(47, 85, 151, 0.3);
-}
-
 .form-section {
-  background: #fff;
+  background: white;
   padding: 1.5rem;
   border-radius: 12px;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* Collapsible Sections */
+.collapsible {
+  border: 1px solid #dce6f5;
+  border-radius: 8px;
+  overflow: hidden;
+}
 .collapsible h2 {
+  background: #f1f5f9;
+  padding: 0.8rem 1rem;
+  margin: 0;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 1.1rem;
 }
-
 .collapsible h2::after {
-  content: "▾";
-  font-size: 1rem;
-  color: #2f5597;
+  content: "▼";
+  font-size: 0.8rem;
+  transition: transform 0.2s;
 }
 .collapsible.collapsed h2::after {
   transform: rotate(-90deg);
 }
-
-/* ========== ESTIMATE PANEL ========== */
-.estimate-panel {
-  background: #fdfaf0;
-  border: 1px solid #ffd965;
+.collapsible .content {
+  padding: 1rem;
+  display: block;
 }
-#estimateDisplay p {
-  font-size: 1rem;
-  margin: 0.4rem 0;
+.collapsible.collapsed .content {
+  display: none;
 }
 
-/* ========== TABLES (Admin) ========== */
+/* ========== TABLES ========== */
 .table-container {
   overflow-x: auto;
-  background: #fff;
+  background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   margin-top: 1rem;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.9rem;
 }
-table th, table td {
+
+th, td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
   text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
-table th {
-  background: #2f5597;
-  color: #fff;
+
+th {
+  background: #2F5597;
+  color: white;
   font-weight: 600;
 }
-table tbody tr:nth-child(even) {
+
+tbody tr:hover {
+  background: #f0f5ff;
+}
+
+tbody tr:nth-child(even) {
   background: #f9fbfd;
 }
-table tbody tr:hover {
-  background: #eaf0fa;
+
+/* ========== ESTIMATE PANEL ========== */
+.estimate-panel {
+  background: #fdf8e8;
+  border: 1px solid #FFD965;
+  border-radius: 8px;
+}
+
+#estimateDisplay p {
+  font-size: 1rem;
+  margin: 0.4rem 0;
+  display: flex;
+  justify-content: space-between;
 }
 
 /* ========== FOOTER ========== */
@@ -314,22 +322,49 @@ footer {
   color: #666;
   font-size: 0.85rem;
   border-top: 1px solid #dce6f5;
+  margin-top: auto;
+}
+
+/* ========== MODALS ========== */
+#modalOverlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+#modalOverlay.hidden { display: none; }
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #999;
+  cursor: pointer;
 }
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
-  #sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #dce6f5;
-  }
-  #map, #proposalMap {
-    height: 400px;
-  }
-  header#mainHeader {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  #mainContainer { flex-direction: column; }
+  #sidebar { width: 100%; border-right: none; border-bottom: 1px solid #dce6f5; }
+  #map, #proposalMap { height: 400px; }
+  header { flex-direction: column; text-align: center; gap: 0.5rem; }
+  .form-grid { grid-template-columns: 1fr; }
 }
 
 /* ========== ANIMATIONS ========== */
@@ -337,6 +372,9 @@ footer {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.modal, .form-section, .sidebar-section {
-  animation: fadeIn 0.3s ease-in-out;
+
+.form-section,
+.sidebar-section,
+.modal {
+  animation: fadeIn 0.3s ease-out;
 }
