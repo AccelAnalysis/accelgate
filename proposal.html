@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accel Mailer | Proposal Form</title>
+  <title>Accel RFP | RFP Form</title>
 
   <!-- Leaflet CSS -->
   <link
@@ -21,22 +21,26 @@
 <body>
   <header id="mainHeader">
     <div class="header-left">
-      <h1>Accel Mailer</h1>
-      <p class="subtitle">Custom Direct Mail Proposal</p>
+      <h1>Accel RFP</h1>
+      <p class="subtitle" id="formSubtitle">Create or Respond to RFP</p>
     </div>
     <div class="header-right">
-      <button id="backToMapBtn" class="secondary-btn">Back to Map</button>
+      <button id="backToMapBtn" class="btn-secondary">Back to Map</button>
     </div>
   </header>
 
   <main id="mainContainer" class="proposal-container">
-    <form id="proposalForm">
-      <!-- Section 1: Contact Info -->
+    <form id="rfpForm">
+      <!-- SECTION 1: MODE & ID (hidden) -->
+      <input type="hidden" id="formMode" name="formMode" />
+      <input type="hidden" id="editRFP_ID" name="RFP_ID" />
+
+      <!-- SECTION 1: CONTACT -->
       <section class="form-section collapsible">
         <h2>1. Contact Information</h2>
         <div class="form-grid">
-          <label>Business Name
-            <input type="text" name="BusinessName" id="BusinessName" required />
+          <label>Organization / Company
+            <input type="text" name="Organization" id="Organization" required />
           </label>
           <label>Contact Name
             <input type="text" name="ContactName" id="ContactName" required />
@@ -50,79 +54,77 @@
         </div>
       </section>
 
-      <!-- Section 2: Targeting & Map -->
+      <!-- SECTION 2: TITLE & TEMPLATE -->
       <section class="form-section collapsible">
-        <h2>2. Targeting Area</h2>
+        <h2>2. RFP Details</h2>
+        <div class="form-grid">
+          <label>RFP Title
+            <input type="text" name="Title" id="Title" placeholder="e.g., Website Redesign for Q1 2026" required />
+          </label>
+          <label>Template
+            <select name="TemplateID" id="TemplateSelect" required>
+              <option value="">-- Select Template --</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <!-- SECTION 3: LOCATION & MAP -->
+      <section class="form-section collapsible">
+        <h2>3. Target Area</h2>
         <div class="form-grid">
           <label>Radius (miles)
-            <input type="number" name="RadiusMiles" id="RadiusMiles" value="3" min="1" max="25" />
+            <input type="number" name="RadiusMiles" id="RadiusMiles" min="1" max="50" value="5" required />
           </label>
-          <label>ZIPs / Cities
-            <input type="text" name="ZipsCities" id="ZipsCities" placeholder="e.g., 23320, Chesapeake" />
-          </label>
-          <label>Audience Type
-            <select name="AudienceType" id="AudienceType">
-              <option value="Residential">Residential</option>
-              <option value="Business">Business</option>
-              <option value="Mixed">Mixed</option>
-            </select>
-          </label>
-          <label>Mail Type
-            <select name="MailType" id="MailType">
-              <option value="Postcard 4x6">Postcard 4x6</option>
-              <option value="Postcard 6x9">Postcard 6x9</option>
-              <option value="Letter">Letter</option>
-            </select>
+          <label>ZIPs / Cities (optional)
+            <input type="text" name="ZipsCities" id="ZipsCities" placeholder="e.g., 90210, Los Angeles" />
           </label>
         </div>
         <div id="proposalMapContainer">
           <div id="proposalMap"></div>
         </div>
+        <p style="margin-top:0.5rem; font-size:0.9rem; color:#666;">
+          Click the map to set the center of your RFP area.
+        </p>
       </section>
 
-      <!-- Section 3: Campaign Details -->
+      <!-- SECTION 4: DYNAMIC FIELDS (from template) -->
+      <section class="form-section collapsible" id="dynamicFieldsSection">
+        <h2>4. Requirements</h2>
+        <div id="dynamicFields"></div>
+      </section>
+
+      <!-- SECTION 5: SCORING PREVIEW (Poster only) -->
+      <section class="form-section collapsible estimate-panel" id="scoringPreviewSection">
+        <h2>Scoring Criteria</h2>
+        <div id="scoringPreview">
+          <p><em>Select a template to view scoring weights.</em></p>
+        </div>
+      </section>
+
+      <!-- SECTION 6: NOTES -->
       <section class="form-section collapsible">
-        <h2>3. Campaign Details</h2>
-        <div class="form-grid">
-          <label>Quantity
-            <input type="number" name="Quantity" id="Quantity" min="250" step="50" required />
-          </label>
-          <label>Budget (optional)
-            <input type="number" name="Budget" id="Budget" min="0" step="1" />
-          </label>
-          <label>Notes
-            <textarea name="Notes" id="Notes" placeholder="Special instructions or requests..."></textarea>
-          </label>
-        </div>
+        <h2>5. Additional Notes</h2>
+        <textarea name="Notes" id="Notes" placeholder="Any special instructions, deadlines, or attachments..."></textarea>
       </section>
 
-      <!-- Section 4: Estimated Total -->
-      <section class="form-section estimate-panel">
-        <h2>Estimated Total</h2>
-        <div id="estimateDisplay">
-          <p><strong>Base Rate:</strong> <span id="baseRate">$0.00</span></p>
-          <p><strong>Rate per Piece:</strong> <span id="ratePerPiece">$0.00</span></p>
-          <p><strong>Estimated Total:</strong> <span id="estTotal">$0.00</span></p>
-        </div>
-      </section>
-
-      <!-- Submit -->
+      <!-- SUBMIT -->
       <div class="form-actions">
-        <button type="submit" id="submitProposalBtn" class="primary-btn">Submit Proposal</button>
+        <button type="submit" id="submitBtn" class="btn-primary">Submit RFP</button>
       </div>
     </form>
   </main>
 
   <footer>
-    <p>&copy; 2025 Accel Analysis | Industrial Diplomacy Division</p>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy Division</p>
   </footer>
 
-  <!-- Dependencies -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha512-vLZfM1r87gqfUlnItp8qG0O8N1XLx1TqBQFwqHobfCzKpIYfQ7zjDA3SeGSOxgAvXxJkncJbD4PUoAc4n1iT9w=="
     crossorigin=""></script>
 
-  <!-- Config + Shared + Proposal -->
+  <!-- Core Scripts -->
   <script src="config.js"></script>
   <script src="shared.js"></script>
   <script src="proposal.js"></script>
