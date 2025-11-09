@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | Accel RFP</title>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- HEADER -->
+  <header id="mainHeader">
+    <div class="header-left">
+      <h1>Privacy Policy</h1>
+      <p class="subtitle">Last updated: November 08, 2025</p>
+    </div>
+    <div class="header-right">
+      <button id="backToMapBtn" class="btn-secondary">Back to Map</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main id="mainContainer" style="max-width: 960px; margin: 2rem auto; padding: 0 1.5rem;">
+    <section class="form-section">
+      <h2>1. Introduction</h2>
+      <p>
+        Accel Analysis ("we", "our", or "us") operates the <strong>Accel RFP Platform</strong> – a map-based system for publishing and responding to Requests for Proposals (RFPs), Quotes (RFQs), and Information (RFIs). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.
+      </p>
+      <p>
+        By accessing or using the platform, you agree to this Privacy Policy. If you do not agree, please do not use the service.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>2. Information We Collect</h2>
+      <ul>
+        <li><strong>Organization Data:</strong> Company name, address(es), contact details (name, email, phone), and geolocation (latitude/longitude) of facilities.</li>
+        <li><strong>RFP Data:</strong> RFP title, description, radius, custom fields, and scoring criteria.</li>
+        <li><strong>Response Data:</strong> Vendor responses, including numeric inputs, text, and calculated scores.</li>
+        <li><strong>Usage Data:</strong> IP address, browser type, pages visited, time spent, and interaction logs (via Google Sheets backend).</li>
+      </ul>
+    </section>
+
+    <section class="form-section">
+      <h2>3. How We Use Your Information</h2>
+      <ul>
+        <li>To publish and display RFPs on the interactive map.</li>
+        <li>To enable vendors to discover and respond to opportunities.</li>
+        <li>To automatically score responses using predefined weights.</li>
+        <li>To generate analytics for poster/evaluators (e.g., response counts, pass rates).</li>
+        <li>To improve platform functionality and user experience.</li>
+      </ul>
+    </section>
+
+    <section class="form-section">
+      <h2>4. Data Storage & Security</h2>
+      <p>
+        All data is stored in <strong>Google Sheets</strong> via Google Apps Script. Access is restricted to:
+      </p>
+      <ul>
+        <li>Authenticated administrators (via Google account).</li>
+        <li>Poster users (their own RFPs and responses).</li>
+        <li>Responder users (publicly published RFPs only).</li>
+      </ul>
+      <p>
+        We implement reasonable security measures but cannot guarantee absolute security. You are responsible for maintaining the confidentiality of any access credentials.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>5. Data Sharing</h2>
+      <p>
+        We do not sell your data. Information is shared only:
+      </p>
+      <ul>
+        <li>With responders who view and respond to published RFPs.</li>
+        <li>With Google (as the backend provider) under their privacy policy.</li>
+        <li>If required by law or to protect our rights.</li>
+      </ul>
+    </section>
+
+    <section class="form-section">
+      <h2>6. Geolocation Data</h2>
+      <p>
+        RFP locations are plotted on a public map using latitude and longitude. By publishing an RFP, you consent to displaying your facility’s approximate location within the defined radius.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>7. Cookies & Tracking</h2>
+      <p>
+        We do not use cookies or third-party tracking. All interactions are client-side or via Google Apps Script.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>8. Your Rights</h2>
+      <p>
+        You may request to access, correct, or delete your data by contacting us at <a href="mailto:privacy@accelanalysis.com">privacy@accelanalysis.com</a>.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>9. Children's Privacy</h2>
+      <p>
+        This platform is not intended for individuals under 18. We do not knowingly collect data from children.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>10. Changes to This Policy</h2>
+      <p>
+        We may update this policy periodically. Changes will be posted here with an updated "Last updated" date.
+      </p>
+    </section>
+
+    <section class="form-section">
+      <h2>11. Contact Us</h2>
+      <p>
+        Accel Analysis<br>
+        Email: <a href="mailto:privacy@accelanalysis.com">privacy@accelanalysis.com</a><br>
+        Website: <a href="https://accelanalysis.com" target="_blank">accelanalysis.com</a>
+      </p>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy</p>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <button class="whats-this" onclick="window.open('https://accelanalysis.com/about', '_blank')">
+      What’s this?
+    </button>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    document.getElementById("backToMapBtn").addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
