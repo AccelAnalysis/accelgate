@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Accel RFP | Interactive Map Console</title>
 
-<!-- Leaflet CSS -->
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  crossorigin=""
-/>
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
   
   <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
@@ -25,6 +25,13 @@
       <p class="subtitle">Map-Based RFP Publishing & Response</p>
     </div>
     <div class="header-right">
+      <!-- ADDRESS SEARCH BAR -->
+      <input 
+        type="text" 
+        id="addrSearch" 
+        placeholder="Search address…" 
+        style="padding:0.5rem; border-radius:6px; border:none; width:220px; font-size:0.9rem;"
+      />
       <div class="mode-switch">
         <label for="viewMode">Mode:</label>
         <select id="viewMode">
@@ -48,10 +55,6 @@
         <label for="criteriaSelect">Filter Criteria</label>
         <select id="criteriaSelect">
           <option value="">-- Any --</option>
-          <option value="construction">Construction</option>
-          <option value="it">IT Services</option>
-          <option value="marketing">Marketing</option>
-          <option value="logistics">Logistics</option>
         </select>
 
         <button id="applyCriteriaBtn" class="btn-secondary">Apply Filter</button>
@@ -92,14 +95,19 @@
 
   <!-- FOOTER -->
   <footer>
-    <p>© 2025 Accel Analysis | Industrial Diplomacy </p>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy</p>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <button class="whats-this" onclick="window.open('https://accelanalysis.com/about', '_blank')">
+      What’s this?
+    </button>
   </footer>
 
-<!-- Leaflet JS -->
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  crossorigin=""
-></script>
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
   
   <!-- Core Scripts -->
   <script src="config.js"></script>
