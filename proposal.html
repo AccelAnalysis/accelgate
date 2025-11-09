@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accel RFP | RFP Form</title>
+  <title>Accel RFP | Create / Respond</title>
 
-<!-- Leaflet CSS -->
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  crossorigin=""
-/>
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
 
   <!-- App Styles -->
   <link rel="stylesheet" href="styles.css" />
@@ -18,111 +18,151 @@
 </head>
 
 <body>
+  <!-- HEADER -->
   <header id="mainHeader">
     <div class="header-left">
-      <h1>Accel RFP</h1>
-      <p class="subtitle" id="formSubtitle">Create or Respond to RFP</p>
+      <h1 id="pageTitle">Create RFP</h1>
+      <p class="subtitle" id="pageSubtitle">Define opportunity location and criteria</p>
     </div>
     <div class="header-right">
       <button id="backToMapBtn" class="btn-secondary">Back to Map</button>
     </div>
   </header>
 
-  <main id="mainContainer" class="proposal-container">
-    <form id="rfpForm">
-      <!-- SECTION 1: MODE & ID (hidden) -->
-      <input type="hidden" id="formMode" name="formMode" />
-      <input type="hidden" id="editRFP_ID" name="RFP_ID" />
+  <!-- MAIN CONTAINER -->
+  <main id="mainContainer">
+    <!-- FORM SIDEBAR -->
+    <aside id="sidebar">
+      <form id="rfpForm">
+        <!-- MODE: Poster vs Responder -->
+        <input type="hidden" name="Mode" id="modeInput" />
 
-      <!-- SECTION 1: CONTACT -->
-      <section class="form-section collapsible">
-        <h2>1. Contact Information</h2>
-        <div class="form-grid">
-          <label>Organization / Company
-            <input type="text" name="Organization" id="Organization" required />
-          </label>
-          <label>Contact Name
-            <input type="text" name="ContactName" id="ContactName" required />
-          </label>
-          <label>Email
-            <input type="email" name="Email" id="Email" required />
-          </label>
-          <label>Phone
-            <input type="tel" name="Phone" id="Phone" />
-          </label>
+        <!-- RFP ID (for edit) -->
+        <input type="hidden" name="RFP_ID" id="rfpIdInput" />
+
+        <!-- USER ID (from profile) -->
+        <input type="hidden" name="UserID" id="userIdInput" />
+
+        <!-- LOCATION SELECTION -->
+        <section class="form-section">
+          <h2>Location</h2>
+          <div class="form-grid">
+            <div>
+              <label for="orgName">Organization</label>
+              <input type="text" id="orgName" name="Organization" required />
+            </div>
+            <div>
+              <label for="siteSelect">Site</label>
+              <select id="siteSelect" name="SiteIndex" required>
+                <option value="">-- Select Site --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div>
+              <label for="latInput">Latitude</label>
+              <input type="number" step="any" id="latInput" name="Lat" readonly />
+            </div>
+            <div>
+              <label for="lngInput">Longitude</label>
+              <input type="number" step="any" id="lngInput" name="Lng" readonly />
+            </div>
+          </div>
+
+          <p><small>Click map to set location, or use pin popup to pre-fill.</small></p>
+        </section>
+
+        <!-- RFP DETAILS -->
+        <section class="form-section">
+          <h2>RFP Details</h2>
+          <div class="form-grid">
+            <div>
+              <label for="titleInput">Title</label>
+              <input type="text" id="titleInput" name="Title" required />
+            </div>
+            <div>
+              <label for="radiusInput">Radius (miles)</label>
+              <input type="number" id="radiusInput" name="RadiusMiles" min="1" max="50" value="5" required />
+            </div>
+          </div>
+
+          <label for="contactName">Contact Name</label>
+          <input type="text" id="contactName" name="ContactName" required />
+
+          <label for="email">Email</label>
+          <input type="email" id="email" name="Email" required />
+
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" name="Phone" />
+
+          <label for="industry">Industry</label>
+          <select id="industry" name="Industry" required>
+            <option value="">-- Select Industry --</option>
+          </select>
+        </section>
+
+        <!-- CUSTOM FIELDS (Dynamic) -->
+        <section class="form-section collapsible" id="customFieldsSection">
+          <h2>Custom Fields</h2>
+          <div class="content" id="customFieldsContainer">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- RESPONSE FIELDS (Responder Mode) -->
+        <section class="form-section collapsible hidden" id="responseSection">
+          <h2>Your Response</h2>
+          <div id="responseFieldsContainer">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- SCORING PREVIEW (Poster Mode) -->
+        <section class="form-section collapsible hidden" id="scoringSection">
+          <h2>Scoring Weights</h2>
+          <div id="scoringWeightsContainer">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ACTIONS -->
+        <div class="form-actions">
+          <button type="button" id="previewBtn" class="btn-secondary">Preview</button>
+          <button type="submit" id="submitBtn" class="btn-primary">Publish RFP</button>
         </div>
-      </section>
+      </form>
+    </aside>
 
-      <!-- SECTION 2: TITLE & TEMPLATE -->
-      <section class="form-section collapsible">
-        <h2>2. RFP Details</h2>
-        <div class="form-grid">
-          <label>RFP Title
-            <input type="text" name="Title" id="Title" placeholder="e.g., Website Redesign for Q1 2026" required />
-          </label>
-          <label>Template
-            <select name="TemplateID" id="TemplateSelect" required>
-              <option value="">-- Select Template --</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <!-- SECTION 3: LOCATION & MAP -->
-      <section class="form-section collapsible">
-        <h2>3. Target Area</h2>
-        <div class="form-grid">
-          <label>Radius (miles)
-            <input type="number" name="RadiusMiles" id="RadiusMiles" min="1" max="50" value="5" required />
-          </label>
-          <label>ZIPs / Cities (optional)
-            <input type="text" name="ZipsCities" id="ZipsCities" placeholder="e.g., 90210, Los Angeles" />
-          </label>
-        </div>
-        <div id="proposalMapContainer">
-          <div id="proposalMap"></div>
-        </div>
-        <p style="margin-top:0.5rem; font-size:0.9rem; color:#666;">
-          Click the map to set the center of your RFP area.
-        </p>
-      </section>
-
-      <!-- SECTION 4: DYNAMIC FIELDS (from template) -->
-      <section class="form-section collapsible" id="dynamicFieldsSection">
-        <h2>4. Requirements</h2>
-        <div id="dynamicFields"></div>
-      </section>
-
-      <!-- SECTION 5: SCORING PREVIEW (Poster only) -->
-      <section class="form-section collapsible estimate-panel" id="scoringPreviewSection">
-        <h2>Scoring Criteria</h2>
-        <div id="scoringPreview">
-          <p><em>Select a template to view scoring weights.</em></p>
-        </div>
-      </section>
-
-      <!-- SECTION 6: NOTES -->
-      <section class="form-section collapsible">
-        <h2>5. Additional Notes</h2>
-        <textarea name="Notes" id="Notes" placeholder="Any special instructions, deadlines, or attachments..."></textarea>
-      </section>
-
-      <!-- SUBMIT -->
-      <div class="form-actions">
-        <button type="submit" id="submitBtn" class="btn-primary">Submit RFP</button>
-      </div>
-    </form>
+    <!-- MAP -->
+    <section id="mapSection">
+      <div id="proposalMap"></div>
+    </section>
   </main>
 
+  <!-- MODAL OVERLAY -->
+  <div id="modalOverlay" class="hidden">
+    <div id="modalContent" class="modal">
+      <button id="modalClose" class="modal-close">x</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
   <footer>
-    <p>© 2025 Accel Analysis | Industrial Diplomacy </p>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy</p>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <button class="whats-this" onclick="window.open('https://accelanalysis.com/about', '_blank')">
+      What’s this?
+    </button>
   </footer>
 
-<!-- Leaflet JS -->
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  crossorigin=""
-></script>
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
 
   <!-- Core Scripts -->
   <script src="config.js"></script>
