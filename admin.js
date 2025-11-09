@@ -1,329 +1,329 @@
 /******************************************************
  * Accel RFP Platform - Admin Dashboard Logic
  * ----------------------------------------------------
- * Full CRUD for:
- *   • Config defaults
- *   • Pricing tiers
- *   • RFP Templates (Fields + Scoring JSON)
- *   • RFP review
- *   • Response auto-ranking & evaluation
+ * Features:
+ *   • Template CRUD with JSON validation
+ *   • NEW: Profile CRUD with HQ + multiple sites
+ *   • Pin color & icon editing
+ *   • Evaluation filtering & scoring details
  * ----------------------------------------------------
  * Depends on: config.js, shared.js, admin.html
  ******************************************************/
 
-let pricingData = [];
-let templateData = [];
-let rfpData = [];
-let responseData = [];
-let evaluationData = [];
+let activeTab = "templates";
+let currentProfile = null;
+let siteCounter = 0;
 
 /******************************************************
  * 1. INITIALIZATION
  ******************************************************/
-document.addEventListener("DOMContentLoaded", async () => {
-  bindUI();
-  await Promise.all([
-    loadConfig(),
-    loadPricing(),
-    loadTemplates(),
-    loadRFPs(),
-    loadEvaluations()
-  ]);
+document.addEventListener("DOMContentLoaded", () => {
+  bindNav();
+  bindForms();
+  bindFilters();
+  loadActiveTab();
 });
 
 /******************************************************
- * 2. EVENT BINDINGS
+ * 2. NAVIGATION
  ******************************************************/
-function bindUI() {
-  // Navigation
-  document.getElementById("backToMapBtn").addEventListener("click", () => {
-    window.location.href = "index.html";
-  });
-
-  // Forms
-  document.getElementById("configForm").addEventListener("submit", saveConfig);
-  document.getElementById("pricingForm").addEventListener("submit", savePricing);
-  document.getElementById("templateForm").addEventListener("submit", saveTemplate);
-
-  // Refresh buttons
-  document.getElementById("refreshPricingBtn").addEventListener("click", loadPricing);
-  document.getElementById("refreshTemplatesBtn").addEventListener("click", loadTemplates);
-  document.getElementById("refreshRFPsBtn").addCustomListener("click", loadRFPs);
-  document.getElementById("refreshEvalsBtn").addEventListener("click", loadEvaluations);
-
-  // Search & Filter
-  document.getElementById("rfpSearch").addEventListener("input", filterRFPs);
-  document.getElementById("evalRFPFilter").addEventListener("change", filterEvaluations);
-}
-
-/******************************************************
- * 3. CONFIG
- ******************************************************/
-async function loadConfig() {
-  try {
-    const res = = await Shared.fetchGet(Config.ROUTES.getConfig);
-    const config = Object.fromEntries(
-      (res?.data || []).map(r => [r.Field, r.Value])
-    );
-    Shared.populateForm(document.getElementById("configForm"), {
-      DefaultRadius: config.DefaultRadius || Config.DEFAULTS.radiusMiles,
-      DefaultZoom: config.DefaultZoom || Config.DEFAULTS.zoomLevel,
-      MinQuantity: config.MinQuantity || Config.DEFAULTS.minQuantity
+function bindNav() {
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeTab = btn.dataset.tab;
+      showTab(activeTab);
     });
-  } catch (err) {
-    Shared.showMessage("Failed to load config.", "error");
-  }
-}
+  });
 
-async function saveConfig(e) {
-  e.preventDefault();
-  const data = Shared.formToJSON(e.target);
-  const payload = Shared.buildPayload(data);
-  try {
-    const res = await Shared.fetchPost(Config.ROUTES.saveConfig, payload);
-    if (res.success) {
-      Shared.showMessage("Config saved.", "success");
-    }
-  } catch (err) {
-    Shared.showMessage("Save failed.", "error");
-  }
-}
-
-/******************************************************
- * 4. PRICING
- ******************************************************/
-async function loadPricing() {
-  try {
-    const res = await Shared.fetchGet(Config.ROUTES.getPricing);
-    pricingData = res?.data || [];
-    renderPricingTable();
-  } catch (err) {
-    Shared.showMessage("Failed to load pricing.", "error");
-  }
-}
-
-function renderPricingTable() {
-  const tbody = document.querySelector("#pricingTable tbody");
-  tbody.innerHTML = "";
-  pricingData.forEach(p => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${p.MailType}</td>
-      <td>${p.Size}</td>
-      <td>$${Number(p.BaseRate).toFixed(2)}</td>
-      <td>${p.StepQty}</td>
-      <td>$${Number(p.StepRate).toFixed(2)}</td>
-      <td>${p.Description}</td>
-      <td>${p.Active}</td>
-      <td>
-        <button class="btn-small btn-secondary" onclick="editPricing('${p.MailType}', '${p.Size}')">Edit</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
+  document.getElementById("backToMapBtn").addEventListener("click", () => {
+    location.href = "index.html";
   });
 }
 
-window.editPricing = (mailType, size) => {
-  const tier = pricingData.find(p => p.MailType === mailType && p.Size === size);
-  if (tier) {
-    Shared.populateForm(document.getElementById("pricingForm"), tier);
-  }
-};
+function showTab(tab) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
+  document.getElementById(tab + "Tab").classList.remove("hidden");
+  loadActiveTab();
+}
 
-async function savePricing(e) {
-  e.preventDefault();
-  const data = Shared.formToJSON(e.target);
-  try {
-    const res = await Shared.fetchPost(Config.ROUTES.savePricing, data);
-    if (res.success) {
-      Shared.showMessage("Pricing tier saved.", "success");
-      e.target.reset();
-      loadPricing();
-    }
-  } catch (err) {
-    Shared.showMessage("Save failed.", "error");
-  }
+async function loadActiveTab() {
+  if (activeTab === "templates") await loadTemplates();
+  if (activeTab === "profiles") await loadProfiles();
+  if (activeTab === "evaluations") await loadEvaluations();
 }
 
 /******************************************************
- * 5. TEMPLATES
+ * 3. TEMPLATES
  ******************************************************/
 async function loadTemplates() {
+  const tbody = document.querySelector("#templatesTable tbody");
+  tbody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
   try {
     const res = await Shared.fetchGet(Config.ROUTES.getTemplates);
-    templateData = res?.data || [];
-    renderTemplatesTable();
-  } catch (err) {
-    Shared.showMessage("Failed to load templates.", "error");
-  }
-}
-
-function renderTemplatesTable() {
-  const tbody = document.querySelector("#templatesTable tbody");
-  tbody.innerHTML = "";
-  templateData.forEach(t => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${t.Name}</td>
-      <td>${t.Industry}</td>
-      <td><pre style="max-height:60px;overflow:auto;font-size:0.8rem;">${t.FieldsJSON}</pre></td>
-      <td><pre style="max-height:60px;overflow:auto;font-size:0.8rem;">${t.ScoringJSON}</pre></td>
-      <td>${t.Active}</td>
-      <td>
-        <button class="btn-small btn-secondary" onclick="editTemplate('${t.TemplateID}')">Edit</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-window.editTemplate = (id) => {
-  const tmpl = templateData.find(t => t.TemplateID === id);
-  if (tmpl) {
-    Shared.populateForm(document.getElementById("templateForm"), {
-      TemplateID: tmpl.TemplateID,
-      Name: tmpl.Name,
-      Industry: tmpl.Industry,
-      Active: tmpl.Active,
-      FieldsJSON: tmpl.FieldsJSON,
-      ScoringJSON: tmpl.ScoringJSON
-    });
-  }
-};
-
-async function saveTemplate(e) {
-  e.preventDefault();
-  const data = Shared.formToJSON(e.target);
-  data.Fields = JSON.parse(data.FieldsJSON || "[]");
-  data.Scoring = JSON.parse(data.ScoringJSON || "{}");
-  try {
-    const res = await Shared.fetchPost(Config.ROUTES.saveTemplate, data);
-    if (res.success) {
-      Shared.showMessage("Template saved.", "success");
-      e.target.reset();
-      loadTemplates();
+    if (res?.data) {
+      tbody.innerHTML = "";
+      res.data.forEach(t => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${t.TemplateID}</td>
+          <td>${t.Name}</td>
+          <td>${t.Industry}</td>
+          <td>
+            <button class="btn-small" onclick="editTemplate('${t.TemplateID}')">Edit</button>
+            <button class="btn-small" style="background:#c0392b;color:white;" onclick="deleteTemplate('${t.TemplateID}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
   } catch (err) {
-    Shared.showMessage("Invalid JSON or save failed.", "error");
+    tbody.innerHTML = "<tr><td colspan='4'>Error loading templates.</td></tr>";
   }
 }
 
-/******************************************************
- * 6. RFPS
- ******************************************************/
-async function loadRFPs() {
-  try {
-    const res = await Shared.fetchGet(Config.ROUTES.getRFPs);
-    rfpData = res?.data || [];
-    renderRFPsTable();
-    populateRFPFilter();
-  } catch (err) {
-    Shared.showMessage("Failed to load RFPs.", "error");
-  }
-}
+window.editTemplate = async (id) => {
+  const res = await Shared.fetchGet(Config.ROUTES.getTemplates, { id });
+  const t = res?.data?.[0];
+  if (!t) return;
+  document.getElementById("templateId").value = t.TemplateID;
+  document.getElementById("templateName").value = t.Name;
+  document.getElementById("templateIndustry").value = t.Industry;
+  document.getElementById("fieldsJSON").value = t.FieldsJSON;
+  document.getElementById("scoringJSON").value = t.ScoringJSON || "";
+  showTab("templates");
+};
 
-function renderRFPsTable(filtered = rfpData) {
-  const tbody = document.querySelector("#rfpsTable tbody");
-  tbody.innerHTML = "";
-  filtered.forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.RFP_ID.slice(0,8)}</td>
-      <td>${r.Title}</td>
-      <td>${r.Organization}</td>
-      <td>${r.ContactName}</td>
-      <td>${r.RadiusMiles}</td>
-      <td>${r.Status}</td>
-      <td>${r.Published}</td>
-      <td>${countResponses(r.RFP_ID)}</td>
-      <td>
-        <button class="btn-small btn-secondary" onclick="viewRFP('${r.RFP_ID}')">View</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function countResponses(rfpID) {
-  return responseData.filter(r => r.RFP_ID === rfpID).length;
-}
-
-function filterRFPs() {
-  const term = document.getElementById("rfpSearch").value.toLowerCase();
-  const filtered = rfpData.filter(r =>
-    r.Title.toLowerCase().includes(term) ||
-    r.Organization.toLowerCase().includes(term)
-  );
-  renderRFPsTable(filtered);
-}
-
-window.viewRFP = (id) => {
-  window.open(`proposal.html?mode=poster&edit=${id}`, "_blank");
+window.deleteTemplate = async (id) => {
+  if (!confirm("Delete this template?")) return;
+  await Shared.fetchPost(Config.ROUTES.saveTemplate, { TemplateID: id, _delete: true });
+  loadTemplates();
 };
 
 /******************************************************
- * 7. EVALUATIONS
+ * 4. PROFILES (NEW)
+ ******************************************************/
+async function loadProfiles() {
+  const tbody = document.querySelector("#profilesTable tbody");
+  tbody.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
+  try {
+    const res = await Shared.fetchGet(Config.ROUTES.getProfiles);
+    if (res?.data) {
+      tbody.innerHTML = "";
+      res.data.forEach(p => {
+        const siteCount = (p.Site_Addresses || '').split('|').filter(Boolean).length;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.UserID}</td>
+          <td>${p.OrgName}</td>
+          <td>${p.HQ_Address}</td>
+          <td>${siteCount}</td>
+          <td>
+            <button class="btn-small" onclick="editProfile('${p.UserID}')">Edit</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    tbody.innerHTML = "<tr><td colspan='5'>Error loading profiles.</td></tr>";
+  }
+}
+
+window.editProfile = async (userId) => {
+  const res = await Shared.fetchGet(Config.ROUTES.getProfiles, { id: userId });
+  currentProfile = res?.data?.[0];
+  if (!currentProfile) return;
+
+  document.getElementById("profileUserId").value = currentProfile.UserID;
+  document.getElementById("orgName").value = currentProfile.OrgName;
+  document.getElementById("hqAddress").value = currentProfile.HQ_Address;
+  document.getElementById("hqLat").value = currentProfile.HQ_Lat;
+  document.getElementById("hqLng").value = currentProfile.HQ_Lng;
+  document.getElementById("pinColor").value = currentProfile.PinColor || "#FFD965";
+  document.getElementById("pinIcon").value = currentProfile.PinIcon || "hq";
+
+  renderSiteList();
+  showTab("profiles");
+};
+
+function renderSiteList() {
+  const container = document.getElementById("siteList");
+  container.innerHTML = "";
+  siteCounter = 0;
+
+  const siteAddrs = (currentProfile?.Site_Addresses || '').split('|').filter(Boolean);
+  const siteLats = (currentProfile?.Site_Lats || '').split('|').filter(Boolean);
+  const siteLngs = (currentProfile?.Site_Lngs || '').split('|').filter(Boolean);
+
+  siteAddrs.forEach((addr, i) => addSiteRow(addr, siteLats[i], siteLngs[i]));
+}
+
+function addSiteRow(address = "", lat = "", lng = "") {
+  const id = `site_${siteCounter++}`;
+  const div = document.createElement("div");
+  div.className = "form-grid";
+  div.style.marginBottom = "1rem";
+  div.innerHTML = `
+    <div>
+      <label>Site Address</label>
+      <input type="text" data-site="addr" value="${address}" placeholder="Enter address" />
+      <button type="button" class="btn-small" data-geocode="${id}">Geocode</button>
+    </div>
+    <div>
+      <label>Lat</label>
+      <input type="number" step="any" data-site="lat" value="${lat}" readonly />
+    </div>
+    <div>
+      <label>Lng</label>
+      <input type="number" step="any" data-site="lng" value="${lng}" readonly />
+    </div>
+    <div style="align-self:end;">
+      <button type="button" class="btn-small" style="background:#c0392b;color:white;" onclick="this.parentElement.parentElement.remove()">Remove</button>
+    </div>
+  `;
+
+  // Geocode button
+  div.querySelector(`[data-geocode="${id}"]`).addEventListener("click", async () => {
+    const addrInput = div.querySelector(`[data-site="addr"]`);
+    const result = await Shared.geocodeAddress(addrInput.value);
+    if (result) {
+      div.querySelector(`[data-site="lat"]`).value = result.lat.toFixed(6);
+      div.querySelector(`[data-site="lng"]`).value = result.lng.toFixed(6);
+    } else {
+      Shared.showMessage("Address not found.", "error");
+    }
+  });
+
+  document.getElementById("siteList").appendChild(div);
+}
+
+/******************************************************
+ * 5. FORM BINDINGS
+ ******************************************************/
+function bindForms() {
+  // Template Form
+  document.getElementById("templateForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = Shared.formToJSON(e.target);
+    try {
+      JSON.parse(data.FieldsJSON);
+      if (data.ScoringJSON) JSON.parse(data.ScoringJSON);
+    } catch (err) {
+      Shared.showMessage("Invalid JSON in fields or scoring.", "error");
+      return;
+    }
+    await Shared.fetchPost(Config.ROUTES.saveTemplate, data);
+    Shared.showMessage("Template saved.", "success");
+    e.target.reset();
+    loadTemplates();
+  });
+
+  document.getElementById("clearTemplateBtn").addEventListener("click", () => {
+    document.getElementById("templateForm").reset();
+    document.getElementById("templateId").value = "";
+  });
+
+  // Profile Form
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = Shared.formToJSON(e.target);
+
+    // Collect sites
+    const siteAddrs = [], siteLats = [], siteLngs = [];
+    document.querySelectorAll("#siteList > div").forEach(row => {
+      const addr = row.querySelector(`[data-site="addr"]`).value.trim();
+      const lat = row.querySelector(`[data-site="lat"]`).value;
+      const lng = row.querySelector(`[data-site="lng"]`).value;
+      if (addr && lat && lng) {
+        siteAddrs.push(addr);
+        siteLats.push(lat);
+        siteLngs.push(lng);
+      }
+    });
+
+    data.Site_Addresses = siteAddrs.join('|');
+    data.Site_Lats = siteLats.join('|');
+    data.Site_Lngs = siteLngs.join('|');
+
+    await Shared.fetchPost(Config.ROUTES.saveProfile, data);
+    Shared.showMessage("Profile saved.", "success");
+    e.target.reset();
+    currentProfile = null;
+    loadProfiles();
+  });
+
+  document.getElementById("clearProfileBtn").addEventListener("click", () => {
+    document.getElementById("profileForm").reset();
+    document.getElementById("siteList").innerHTML = "";
+    currentProfile = null;
+  });
+
+  document.getElementById("addSiteBtn").addEventListener("click", () => addSiteRow());
+
+  // HQ Geocode
+  document.getElementById("geocodeHQBtn").addEventListener("click", async () => {
+    const addr = document.getElementById("hqAddress").value;
+    const result = await Shared.geocodeAddress(addr);
+    if (result) {
+      document.getElementById("hqLat").value = result.lat.toFixed(6);
+      document.getElementById("hqLng").value = result.lng.toFixed(6);
+    } else {
+      Shared.showMessage("HQ address not found.", "error");
+    }
+  });
+}
+
+/******************************************************
+ * 6. EVALUATIONS
  ******************************************************/
 async function loadEvaluations() {
+  const tbody = document.querySelector("#evaluationsTable tbody");
+  tbody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
   try {
-    const [respRes, evalRes] = await Promise.all([
-      Shared.fetchGet(Config.ROUTES.getResponses),
-      Shared.fetchGet(Config.ROUTES.getEvaluations)
-    ]);
-    responseData = respRes?.data || [];
-    evaluationData = evalRes?.data || [];
-    renderEvaluationsTable();
+    const res = await Shared.fetchGet(Config.ROUTES.getEvaluations);
+    if (res?.data) {
+      tbody.innerHTML = "";
+      res.data.forEach(e => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${e.ResponseID}</td>
+          <td>${e.RFP_ID}</td>
+          <td>${e.Score}</td>
+          <td>${e.Pass === "TRUE" ? "Yes" : "No"}</td>
+          <td>${e.Timestamp}</td>
+          <td><button class="btn-small" onclick="viewEvaluation('${e.ResponseID}')">View</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
   } catch (err) {
-    Shared.showMessage("Failed to load evaluations.", "error");
+    tbody.innerHTML = "<tr><td colspan='6'>Error loading evaluations.</td></tr>";
   }
 }
 
-function renderEvaluationsTable() {
-  const tbody = document.querySelector("#evaluationsTable tbody");
-  tbody.innerHTML = "";
-  const filtered = filterByRFP(evaluationData);
-  filtered.forEach(e => {
-    const resp = responseData.find(r => r.ResponseID === e.ResponseID) || {};
-    const rfp = rfpData.find(r => r.RFP_ID === e.RFP_ID) || {};
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${e.ResponseID.slice(0,8)}</td>
-      <td>${rfp.Title || "—"}</td>
-      <td>${resp.ResponderName || "—"}</td>
-      <td>${e.Score}</td>
-      <td>${e.Rank || "?"}</td>
-      <td>${e.ThresholdPass === "TRUE" ? "Yes" : "No"}</td>
-      <td>${new Date(e.EvaluatedAt).toLocaleDateString()}</td>
-      <td>
-        <button class="btn-small btn-secondary" onclick="viewResponse('${e.ResponseID}')">View</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
+window.viewEvaluation = async (responseId) => {
+  const res = await Shared.fetchGet(Config.ROUTES.getResponses, { id: responseId });
+  const r = res?.data?.[0];
+  if (!r) return;
 
-function filterByRFP(data) {
-  const rfpID = document.getElementById("evalRFPFilter").value;
-  return rfpID ? data.filter(e => e.RFP_ID === rfpID) : data;
-}
-
-function populateRFPFilter() {
-  const select = document.getElementById("evalRFPFilter");
-  select.innerHTML = `<option value="">-- All RFPs --</option>`;
-  rfpData.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r.RFP_ID;
-    opt.textContent = `${r.Title} (${r.RFP_ID.slice(0,8)})`;
-    select.appendChild(opt);
-  });
-}
-
-function filterEvaluations() {
-  renderEvaluationsTable();
-}
-
-window.viewResponse = (id) => {
-  alert(`Response JSON:\n${JSON.stringify(
-    responseData.find(r => r.ResponseID === id)?.ResponseJSON || {}, null, 2
-  )}`);
+  const details = JSON.parse(r.ScoreDetails || "{}");
+  let html = `<h3>Response #${r.ResponseID}</h3><pre>${JSON.stringify(details, null, 2)}</pre>`;
+  document.getElementById("modalBody").innerHTML = html;
+  document.getElementById("modalOverlay").classList.remove("hidden");
 };
+
+function bindFilters() {
+  document.getElementById("applyEvalFilterBtn").addEventListener("click", loadEvaluations);
+}
+
+/******************************************************
+ * 7. MODAL
+ ******************************************************/
+document.getElementById("modalClose").addEventListener("click", () => {
+  document.getElementById("modalOverlay").classList.add("hidden");
+});
+document.getElementById("modalOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "modalOverlay") document.getElementById("modalOverlay").classList.add("hidden");
+});
