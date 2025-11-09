@@ -14,212 +14,211 @@
   <!-- HEADER -->
   <header id="mainHeader">
     <div class="header-left">
-      <h1>Accel RFP</h1>
-      <p class="subtitle">Administration Dashboard</p>
+      <h1>Admin Dashboard</h1>
+      <p class="subtitle">Manage Templates, Profiles, and Evaluations</p>
     </div>
     <div class="header-right">
       <button id="backToMapBtn" class="btn-secondary">Back to Map</button>
     </div>
   </header>
 
-  <main id="mainContainer" class="admin-container">
+  <!-- MAIN CONTAINER -->
+  <main id="mainContainer">
+    <!-- SIDEBAR NAV -->
+    <aside id="sidebar">
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-tab="templates">Templates</button>
+        <button class="nav-btn" data-tab="profiles">Profiles</button>
+        <button class="nav-btn" data-tab="evaluations">Evaluations</button>
+      </nav>
+    </aside>
 
-    <!-- SECTION 1: CONFIG DEFAULTS -->
-    <section class="form-section collapsible">
-      <h2>1. System Configuration</h2>
-      <form id="configForm" class="admin-form">
-        <div class="form-grid">
-          <label>Default Radius (miles)
-            <input type="number" name="DefaultRadius" id="DefaultRadius" min="1" max="50" />
-          </label>
-          <label>Default Zoom Level
-            <input type="number" name="DefaultZoom" id="DefaultZoom" min="1" max="18" />
-          </label>
-          <label>Minimum Quantity
-            <input type="number" name="MinQuantity" id="MinQuantity" min="1" />
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn-primary">Save Config</button>
-        </div>
-      </form>
-    </section>
+    <!-- CONTENT AREA -->
+    <section id="contentArea">
+      <!-- TEMPLATES TAB -->
+      <section id="templatesTab" class="tab-content">
+        <div class="form-section">
+          <h2>RFP Templates</h2>
+          <form id="templateForm">
+            <input type="hidden" name="TemplateID" id="templateId" />
+            <div class="form-grid">
+              <div>
+                <label for="templateName">Template Name</label>
+                <input type="text" id="templateName" name="Name" required />
+              </div>
+              <div>
+                <label for="templateIndustry">Industry</label>
+                <input type="text" id="templateIndustry" name="Industry" required />
+              </div>
+            </div>
 
-    <!-- SECTION 2: PRICING TIERS -->
-    <section class="form-section collapsible">
-      <h2>2. Pricing Management</h2>
-      <form id="pricingForm" class="admin-form">
-        <div class="form-grid">
-          <label>Mail Type
-            <input type="text" name="MailType" placeholder="Postcard 4x6" required />
-          </label>
-          <label>Size
-            <input type="text" name="Size" placeholder="4x6" required />
-          </label>
-          <label>Base Rate
-            <input type="number" name="BaseRate" step="0.01" required />
-          </label>
-          <label>Step Qty
-            <input type="number" name="StepQty" min="1" value="500" />
-          </label>
-          <label>Step Rate
-            <input type="number" name="StepRate" step="0.01" />
-          </label>
-          <label>Description
-            <input type="text" name="Description" />
-          </label>
-          <label>Active
-            <select name="Active">
-              <option value="TRUE">TRUE</option>
-              <option value="FALSE">FALSE</option>
-            </select>
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn-primary">Save Tier</button>
-          <button type="button" id="refreshPricingBtn" class="btn-secondary">Refresh</button>
-        </div>
-      </form>
-
-      <div class="table-container">
-        <table id="pricingTable">
-          <thead>
-            <tr>
-              <th>Mail Type</th>
-              <th>Size</th>
-              <th>Base Rate</th>
-              <th>Step Qty</th>
-              <th>Step Rate</th>
-              <th>Description</th>
-              <th>Active</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- SECTION 3: RFP TEMPLATES -->
-    <section class="form-section collapsible">
-      <h2>3. RFP Templates</h2>
-      <form id="templateForm" class="admin-form">
-        <input type="hidden" name="TemplateID" id="TemplateID" />
-        <div class="form-grid">
-          <label>Template Name
-            <input type="text" name="Name" id="TemplateName" required />
-          </label>
-          <label>Industry
-            <input type="text" name="Industry" id="TemplateIndustry" required />
-          </label>
-          <label>Active
-            <select name="Active" id="TemplateActive">
-              <option value="TRUE">TRUE</option>
-              <option value="FALSE">FALSE</option>
-            </select>
-          </label>
-        </div>
-
-        <h3 style="margin-top:1rem;">Custom Fields (JSON)</h3>
-        <textarea name="FieldsJSON" id="FieldsJSON" rows="6" placeholder='[
-  {"name": "budget", "label": "Budget Range", "type": "text", "required": true},
-  {"name": "timeline", "label": "Project Timeline", "type": "textarea"}
+            <label for="fieldsJSON">Fields JSON</label>
+            <textarea id="fieldsJSON" name="FieldsJSON" rows="8" placeholder='[
+  {"name":"Cost","label":"Total Cost ($)","type":"number","required":true},
+  {"name":"Timeline","label":"Delivery Timeline (days)","type":"number"},
+  {"name":"Experience","label":"Years in Industry","type":"range","min":0,"max":20}
 ]'></textarea>
 
-        <h3>Scoring Weights (JSON)</h3>
-        <textarea name="ScoringJSON" id="ScoringJSON" rows="4" placeholder='{
+            <label for="scoringJSON">Scoring Weights JSON</label>
+            <textarea id="scoringJSON" name="ScoringJSON" rows="4" placeholder='{
   "Cost": 40,
   "Timeline": 30,
   "Experience": 20,
   "Innovation": 10
 }'></textarea>
 
-        <div class="form-actions">
-          <button type="submit" class="btn-primary">Save Template</button>
-          <button type="button" id="refreshTemplatesBtn" class="btn-secondary">Refresh</button>
+            <div class="form-actions">
+              <button type="button" id="clearTemplateBtn" class="btn-secondary">Clear</button>
+              <button type="submit" class="btn-primary">Save Template</button>
+            </div>
+          </form>
         </div>
-      </form>
 
-      <div class="table-container">
-        <table id="templatesTable">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Industry</th>
-              <th>Fields</th>
-              <th>Scoring</th>
-              <th>Active</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+        <div class="table-container">
+          <table id="templatesTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Industry</th>
+                <th>Actions</th>
+              </tr>
+           ogén
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PROFILES TAB (NEW) -->
+      <section id="profilesTab" class="tab-content hidden">
+        <div class="form-section">
+          <h2>Organization Profile</h2>
+          <form id="profileForm">
+            <input type="hidden" name="UserID" id="profileUserId" />
+
+            <div class="form-grid">
+              <div>
+                <label for="orgName">Organization Name</label>
+                <input type="text" id="orgName" name="OrgName" required />
+              </div>
+              <div>
+                <label for="hqAddress">HQ Address</label>
+                <input type="text" id="hqAddress" name="HQ_Address" required />
+                <button type="button" id="geocodeHQBtn" class="btn-small">Geocode</button>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label for="hqLat">HQ Latitude</label>
+                <input type="number" step="any" id="hqLat" name="HQ_Lat" readonly />
+              </div>
+              <div>
+                <label for="hqLng">HQ Longitude</label>
+                <input type="number" step="any" id="hqLng" name="HQ_Lng" readonly />
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label for="pinColor">Pin Color</label>
+                <input type="color" id="pinColor" name="PinColor" value="#FFD965" />
+              </div>
+              <div>
+                <label for="pinIcon">Pin Icon</label>
+                <select id="pinIcon" name="PinIcon">
+                  <option value="hq">Headquarters (Gold)</option>
+                  <option value="site">Site (Blue)</option>
+                </select>
+              </div>
+            </div>
+
+            <hr>
+
+            <h3>Additional Site Locations</h3>
+            <div id="siteList"></div>
+            <button type="button" id="addSiteBtn" class="btn-secondary">+ Add Site</button>
+
+            <div class="form-actions">
+              <button type="button" id="clearProfileBtn" class="btn-secondary">Clear</button>
+              <button type="submit" class="btn-primary">Save Profile</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="table-container">
+          <table id="profilesTable">
+            <thead>
+              <tr>
+                <th>UserID</th>
+                <th>Organization</th>
+                <th>HQ</th>
+                <th>Sites</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- EVALUATIONS TAB -->
+      <section id="evaluationsTab" class="tab-content hidden">
+        <div class="form-section">
+          <h2>Response Evaluations</h2>
+          <div id="evaluationFilters" class="form-grid">
+            <div>
+              <label for="evalRFPFilter">RFP ID</label>
+              <input type="text" id="evalRFPFilter" placeholder="Filter by RFP ID" />
+            </div>
+            <div>
+              <label for="evalScoreFilter">Min Score</label>
+              <input type="number" id="evalScoreFilter" min="0" max="100" placeholder="0–100" />
+            </div>
+          </div>
+          <button id="applyEvalFilterBtn" class="btn-secondary">Apply Filter</button>
+        </div>
+
+        <div class="table-container">
+          <table id="evaluationsTable">
+            <thead>
+              <tr>
+                <th>Response ID</th>
+                <th>RFP ID</th>
+                <th>Score</th>
+                <th>Pass</th>
+                <th>Submitted</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
     </section>
-
-    <!-- SECTION 4: RFP REVIEW -->
-    <section class="form-section collapsible">
-      <h2>4. Published RFPs</h2>
-      <div class="filter-bar" style="margin-bottom:1rem; display:flex; gap:0.5rem;">
-        <input type="text" id="rfpSearch" placeholder="Search by title or organization..." style="flex:1;" />
-        <button id="refreshRFPsBtn" class="btn-secondary">Refresh</button>
-      </div>
-      <div class="table-container">
-        <table id="rfpsTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Org</th>
-              <th>Contact</th>
-              <th>Radius</th>
-              <th>Status</th>
-              <th>Published</th>
-              <th>Responses</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- SECTION 5: RESPONSE EVALUATION -->
-    <section class="form-section collapsible">
-      <h2>5. Response Evaluation & Ranking</h2>
-      <div class="filter-bar" style="margin-bottom:1rem; display:flex; gap:0.5rem;">
-        <select id="evalRFPFilter" style="flex:1;">
-          <option value="">-- All RFPs --</option>
-        </select>
-        <button id="refreshEvalsBtn" class="btn-secondary">Refresh</button>
-      </div>
-      <div class="table-container">
-        <table id="evaluationsTable">
-          <thead>
-            <tr>
-              <th>Response ID</th>
-              <th>RFP</th>
-              <th>Responder</th>
-              <th>Score</th>
-              <th>Rank</th>
-              <th>Pass</th>
-              <th>Evaluated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
   </main>
 
+  <!-- MODAL -->
+  <div id="modalOverlay" class="hidden">
+    <div id="modalContent" class="modal">
+      <button id="modalClose" class="modal-close">x</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
   <footer>
-    <p>© 2025 Accel Analysis, LLC | Industrial Diplomacy</p>
+    <p>© 2025 Accel Analysis | Industrial Diplomacy</p>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <button class="whats-this" onclick="window.open('https://accelanalysis.com/about', '_blank')">
+      What’s this?
+    </button>
   </footer>
 
   <!-- Core Scripts -->
-  <script src="config.js"></script>
+  <script src="config.js"></matched></script>
   <script src="shared.js"></script>
   <script src="admin.js"></script>
 </body>
