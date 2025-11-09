@@ -7,6 +7,8 @@
  *   • Click-to-create RFP or respond
  *   • Real-time filtering & stats
  *   • Modal for RFP preview/response
+ *   • NEW: Address search + Profile pins (HQ + sites)
+ *   • NEW: Pin popup with Create RFP, Edit, Target Market
  * ----------------------------------------------------
  * Depends on: config.js, shared.js, index.html
  ******************************************************/
@@ -18,6 +20,7 @@ let rfpData = [];
 let filteredData = [];
 let activeMode = "poster";
 let selectedCenter = null;
+let ownProfile = null;
 
 /******************************************************
  * 1. INITIALIZATION
@@ -25,7 +28,7 @@ let selectedCenter = null;
 document.addEventListener("DOMContentLoaded", async () => {
   initMap();
   bindUI();
-  await loadRFPs();
+  await Promise.all([loadRFPs(), loadOwnProfile(), loadCriteria()]);
   updateMode();
 });
 
@@ -48,7 +51,7 @@ function initMap() {
 }
 
 /******************************************************
- * 3. LOAD RFPs FROM BACKEND
+ * 3. LOAD RFPS FROM BACKEND
  ******************************************************/
 async function loadRFPs() {
   try {
@@ -66,7 +69,105 @@ async function loadRFPs() {
 }
 
 /******************************************************
- * 4. RENDER MARKERS
+ * 4. LOAD OWN PROFILE (HQ + Sites)
+ ******************************************************/
+async function loadOwnProfile() {
+  try {
+    const res = await Shared.fetchGet(Config.ROUTES.getProfiles);
+    ownProfile = res?.data?.[0]; // Single org for now
+    if (ownProfile) {
+      addProfilePins(ownProfile);
+      Shared.showMessage(`Profile loaded: ${ownProfile.OrgName}`, "info");
+    }
+  } catch (err) {
+    Config.DEBUG.error("loadOwnProfile error:", err);
+  }
+}
+
+function addProfilePins(profile) {
+  // HQ Pin
+  if (profile.HQ_Lat && profile.HQ_Lng) {
+    const hqIcon = L.icon({
+      iconUrl: 'assets/icons/hq.svg',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
+    });
+    const hqMarker = L.marker([profile.HQ_Lat, profile.HQ_Lng], { icon: hqIcon }).addTo(map);
+    hqMarker.bindPopup(getOwnPinPopup(profile, true));
+    hqMarker.on('click', () => openOwnPinPopup(profile, true, hqMarker));
+  }
+
+  // Site Pins
+  const siteLats = (profile.Site_Lats || '').split('|').filter(Boolean);
+  const siteLngs = (profile.Site_Lngs || '').split('|').filter(Boolean);
+  const siteAddrs = (profile.Site_Addresses || '').split('|').filter(Boolean);
+
+  siteLats.forEach((lat, i) => {
+    const lng = siteLngs[i];
+    if (!lat || !lng) return;
+    const siteIcon = L.icon({
+      iconUrl: 'assets/icons/site.svg',
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -28]
+    });
+    const siteMarker = L.marker([lat, lng], { icon: siteIcon }).addTo(map);
+    const siteName = siteAddrs[i] || `Site ${i + 1}`;
+    siteMarker.bindPopup(getOwnPinPopup(profile, false, siteName));
+    siteMarker.on('click', () => openOwnPinPopup(profile, false, siteMarker, siteName));
+  });
+}
+
+function getOwnPinPopup(profile, isHQ, siteName = '') {
+  const title = isHQ ? `${profile.OrgName} (HQ)` : `${profile.OrgName} – ${siteName}`;
+  const addr = isHQ ? profile.HQ_Address : siteName;
+  return `
+    <div class="popup-content">
+      <b>${title}</b><br>
+      <small>${addr}</small><hr>
+      <div class="popup-actions">
+        <button onclick="startRFPFromPin('${profile.UserID}', ${isHQ ? profile.HQ_Lat : 'null'}, ${isHQ ? profile.HQ_Lng : 'null'})">
+          Create RFP
+        </button>
+        <button onclick="editPin('${profile.UserID}', ${isHQ})">
+          Edit Pin
+        </button>
+        <button onclick="showTargetMarket(${isHQ ? profile.HQ_Lat : 'null'}, ${isHQ ? profile.HQ_Lng : 'null'})">
+          Target Market
+        </button>
+      </div>
+    </div>`;
+}
+
+function openOwnPinPopup(profile, isHQ, marker, siteName) {
+  marker.setPopupContent(getOwnPinPopup(profile, isHQ, siteName));
+  marker.openPopup();
+}
+
+/******************************************************
+ * 5. ADDRESS SEARCH
+ ******************************************************/
+async function performAddressSearch() {
+  const query = document.getElementById('addrSearch').value.trim();
+  if (!query) return;
+
+  Shared.showMessage("Searching...", "info");
+  const result = await Shared.geocodeAddress(query);
+  if (result) {
+    map.setView([result.lat, result.lng], 14);
+    L.marker([result.lat, result.lng])
+      .addTo(map)
+      .bindPopup(`<b>${query}</b>`)
+      .openPopup();
+    Shared.showMessage("Location found!", "success");
+  } else {
+    Shared.showMessage("Address not found.", "error");
+  }
+}
+
+/******************************************************
+ * 6. RENDER MARKERS (RFPs)
  ******************************************************/
 function renderMarkers() {
   clearMarkers();
@@ -89,13 +190,13 @@ function renderMarkers() {
       fillOpacity: 0.8
     }).addTo(map);
 
-    marker.bindPopup(getPopupHTML(rfp));
+    marker.bindPopup(getRFPPopupHTML(rfp));
     marker.on("click", () => openRFPModal(rfp));
     rfpMarkers.push(marker);
   });
 }
 
-function getPopupHTML(rfp) {
+function getRFPPopupHTML(rfp) {
   return `
     <div class="popup-content">
       <h3>${rfp.Title || "Untitled RFP"}</h3>
@@ -114,13 +215,12 @@ function clearMarkers() {
 }
 
 /******************************************************
- * 5. MODE SWITCHING
+ * 7. MODE SWITCHING
  ******************************************************/
 function updateMode() {
   const mode = document.getElementById("viewMode").value;
   activeMode = mode;
 
-  // Update UI
   document.body.classList.toggle("responder-mode", mode === "responder");
   document.getElementById("createRFPBtn").style.display = 
     mode === "poster" ? "block" : "none";
@@ -131,7 +231,7 @@ function updateMode() {
 }
 
 /******************************************************
- * 6. RADIUS RINGS ON CLICK
+ * 8. RADIUS RINGS ON CLICK
  ******************************************************/
 function drawRadiusRings(center, miles) {
   clearRadiusRings();
@@ -162,8 +262,24 @@ function clearRadiusRings() {
 }
 
 /******************************************************
- * 7. FILTERING & STATS
+ * 9. FILTERING & STATS
  ******************************************************/
+async function loadCriteria() {
+  try {
+    const res = await Shared.fetchGet(Config.ROUTES.getTemplates);
+    const select = document.getElementById("criteriaSelect");
+    select.innerHTML = `<option value="">-- Any --</option>`;
+    res?.data?.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.Industry;
+      opt.textContent = t.Industry;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    Config.DEBUG.error("loadCriteria error:", err);
+  }
+}
+
 function applyFilters() {
   const criteria = document.getElementById("criteriaSelect").value;
   const radius = parseFloat(document.getElementById("radiusSize").value) || 5;
@@ -171,7 +287,7 @@ function applyFilters() {
   filteredData = rfpData.filter(rfp => {
     const lat = parseFloat(rfp.Lat), lng = parseFloat(rfp.Lng);
     if (isNaN(lat) || isNaN(lng)) return false;
-    if (criteria && !rfp.Title.toLowerCase().includes(criteria)) return false;
+    if (criteria && !rfp.Title.toLowerCase().includes(criteria.toLowerCase())) return false;
 
     if (selectedCenter) {
       const dist = map.distance(selectedCenter, [lat, lng]) / 1609.34;
@@ -209,7 +325,7 @@ function updateRadiusCount() {
 }
 
 /******************************************************
- * 8. MODAL HANDLING
+ * 10. MODAL HANDLING
  ******************************************************/
 function openRFPModal(rfp) {
   const modalBody = document.getElementById("modalBody");
@@ -249,11 +365,42 @@ function respondToRFP(id) {
 }
 
 /******************************************************
- * 9. UI BINDINGS
+ * 11. GLOBAL EXPORTS & ACTIONS
+ ******************************************************/
+window.startRFPFromPin = (userID, lat, lng) => {
+  if (!lat || !lng) return;
+  sessionStorage.setItem('rfpDraft', JSON.stringify({ UserID: userID, Lat: lat, Lng: lng }));
+  location.href = 'proposal.html?mode=poster';
+};
+
+window.editPin = (userID, isHQ) => {
+  location.href = `admin.html#profile-${userID}-${isHQ ? 'hq' : 'site'}`;
+};
+
+window.showTargetMarket = (lat, lng) => {
+  if (!lat || !lng) return;
+  const center = L.latLng(lat, lng);
+  const radius = parseFloat(document.getElementById("radiusSize").value) || 5;
+  drawRadiusRings(center, radius);
+  applyFilters();
+};
+
+window.openRFPModal = openRFPModal;
+window.editRFP = editRFP;
+window.respondToRFP = respondToRFP;
+
+/******************************************************
+ * 12. UI BINDINGS
  ******************************************************/
 function bindUI() {
   // Mode switch
   document.getElementById("viewMode").addEventListener("change", updateMode);
+
+  // Address search
+  const searchInput = document.getElementById("addrSearch");
+  searchInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") performAddressSearch();
+  });
 
   // Map click → draw rings
   map.on("click", (e) => {
@@ -293,10 +440,3 @@ function bindUI() {
     }
   });
 }
-
-/******************************************************
- * 10. GLOBAL EXPORTS (for inline onclick)
- ******************************************************/
-window.openRFPModal = openRFPModal;
-window.editRFP = editRFP;
-window.respondToRFP = respondToRFP;
